@@ -3,8 +3,89 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { initEngine, shutdownEngine, gameLoop, getPlayerState, getMoney, getHousing, getJob, getDailyBalance, spendMoney, HousingTier } from './engine';
+import { initEngine, shutdownEngine, gameLoop, getPlayerState, getMoney, getHousing, getJob, getDailyBalance, spendMoney, HousingTier, skipDay, skipWeek } from './engine';
 import ContainerFarm from './businesses/herbs/ContainerFarm';
+
+// Dev controls (for testing time-based mechanics)
+function DevControls() {
+  const [show, setShow] = useState(false);
+  
+  if (!show) {
+    return (
+      <button
+        onClick={() => setShow(true)}
+        style={{
+          position: 'fixed',
+          bottom: '10px',
+          right: '10px',
+          background: '#2a2a4a',
+          color: '#888',
+          border: 'none',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '11px',
+          zIndex: 1000,
+        }}
+      >
+        🛠️ Dev
+      </button>
+    );
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: '10px',
+      right: '10px',
+      background: '#1a1a2e',
+      border: '1px solid #3a3a5a',
+      borderRadius: '8px',
+      padding: '12px',
+      zIndex: 1000,
+      fontFamily: 'monospace',
+      fontSize: '12px',
+    }}>
+      <div style={{ color: '#888', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>🛠️ Dev Controls</span>
+        <button onClick={() => setShow(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button
+          onClick={() => { skipDay(); console.log('[Dev] Skipped 1 day'); }}
+          style={{
+            background: '#4ecdc4',
+            color: '#000',
+            border: 'none',
+            padding: '6px 12px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 600,
+          }}
+        >
+          +1 Day
+        </button>
+        <button
+          onClick={() => { skipWeek(); console.log('[Dev] Skipped 7 days'); }}
+          style={{
+            background: '#f7b731',
+            color: '#000',
+            border: 'none',
+            padding: '6px 12px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 600,
+          }}
+        >
+          +7 Days
+        </button>
+      </div>
+      <div style={{ color: '#666', marginTop: '8px', fontSize: '10px' }}>
+        Check console for economy logs
+      </div>
+    </div>
+  );
+}
 
 // Game time display component
 function GameHeader() {
@@ -608,5 +689,10 @@ export default function App() {
     );
   }
 
-  return <Home />;
+  return (
+    <>
+      <Home />
+      <DevControls />
+    </>
+  );
 }

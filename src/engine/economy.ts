@@ -224,16 +224,25 @@ function processDailyEconomy(): void {
   const jobIncome = getDailyJobIncome();
   const rent = getDailyRent();
   
+  console.log(`[Economy] New day! Processing daily economy...`);
+  console.log(`[Economy] Job income: $${jobIncome}, Rent: $${rent}`);
+  
   // Add job income
   if (jobIncome > 0) {
     addMoney(jobIncome, 'Day job income');
+    console.log(`[Economy] Added job income: +$${jobIncome}`);
   }
   
   // Pay rent
   if (!spendMoney(rent, 'Rent')) {
     // Can't pay rent - trigger failure state
+    console.log(`[Economy] Can't pay rent! Triggering bankruptcy...`);
     handleBankruptcy();
+  } else {
+    console.log(`[Economy] Paid rent: -$${rent}`);
   }
+  
+  console.log(`[Economy] Balance after daily processing: $${getMoney()}`);
   
   // TODO: Process business upkeep
 }
