@@ -161,10 +161,15 @@ class GameLoop {
 
   /**
    * Fast-forward time (for testing)
+   * This triggers day events for each day skipped
    */
   fastForward(gameDays: number): void {
     const additionalMs = gameDays * REAL_MS_PER_GAME_DAY;
-    this.setAccumulatedMs(this.state.accumulatedMs + additionalMs);
+    // Don't use setAccumulatedMs because it updates lastDayEmitted
+    // We want the tick loop to discover the change and emit events
+    this.state.accumulatedMs += additionalMs;
+    this.state.gameTime = this.calculateGameTime(this.state.accumulatedMs / REAL_MS_PER_GAME_DAY);
+    // Note: lastDayEmitted is NOT updated here, so next tick will emit newDay events
   }
 
   /**
