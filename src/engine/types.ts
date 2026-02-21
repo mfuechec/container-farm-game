@@ -40,11 +40,11 @@ export interface HousingTier {
 }
 
 export const HOUSING_TIERS: HousingTier[] = [
-  { id: 1, name: 'Studio Apartment', slots: 2, rentPerDay: 50, unlockSavings: 0 },
-  { id: 2, name: '1BR Apartment', slots: 4, rentPerDay: 100, unlockSavings: 5000 },
-  { id: 3, name: '2BR Apartment', slots: 6, rentPerDay: 175, unlockSavings: 15000 },
-  { id: 4, name: 'Small House', slots: 10, rentPerDay: 300, unlockSavings: 40000 },
-  { id: 5, name: 'Large House', slots: 16, rentPerDay: 500, unlockSavings: 100000, requiresQuitJob: true },
+  { id: 1, name: 'Studio Apartment', slots: 1, rentPerDay: 50, unlockSavings: 0 },
+  { id: 2, name: '1BR Apartment', slots: 2, rentPerDay: 100, unlockSavings: 5000 },
+  { id: 3, name: '2BR Apartment', slots: 4, rentPerDay: 175, unlockSavings: 15000 },
+  { id: 4, name: 'Small House', slots: 6, rentPerDay: 300, unlockSavings: 40000 },
+  { id: 5, name: 'Large House', slots: 10, rentPerDay: 500, unlockSavings: 100000, requiresQuitJob: true },
 ];
 
 export interface Job {

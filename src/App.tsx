@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { initEngine, shutdownEngine, gameLoop, getPlayerState, getMoney, getHousing, getJob, getDailyBalance, spendMoney } from './engine';
+import { initEngine, shutdownEngine, gameLoop, getPlayerState, getMoney, getHousing, getJob, getDailyBalance, spendMoney, HousingTier } from './engine';
 import ContainerFarm from './businesses/herbs/ContainerFarm';
 
 // Game time display component
@@ -70,48 +70,143 @@ function GameHeader() {
   );
 }
 
-// Business slot component
-function BusinessSlot({ 
-  index, 
-  business, 
-  onSelect 
+// Apartment layout component
+function ApartmentLayout({ 
+  housing,
+  businesses,
+  onClickSpace,
+  onClickBusiness,
 }: { 
-  index: number; 
-  business: React.ReactNode | null;
-  onSelect: () => void;
+  housing: HousingTier;
+  businesses: string[];
+  onClickSpace: (slotIndex: number) => void;
+  onClickBusiness: (businessId: string) => void;
 }) {
-  if (business) {
-    return <div style={{ flex: 1 }}>{business}</div>;
-  }
+  const slots = housing.slots;
+  const emptySlots = slots - businesses.length;
+  
+  // Different layouts based on housing tier
+  const getLayoutStyle = () => {
+    switch (housing.id) {
+      case 1: // Studio
+        return { gridTemplateColumns: '1fr', maxWidth: '400px' };
+      case 2: // 1BR
+        return { gridTemplateColumns: '1fr 1fr', maxWidth: '600px' };
+      case 3: // 2BR
+        return { gridTemplateColumns: '1fr 1fr 1fr', maxWidth: '800px' };
+      default:
+        return { gridTemplateColumns: 'repeat(4, 1fr)', maxWidth: '1000px' };
+    }
+  };
 
   return (
-    <div 
-      onClick={onSelect}
-      style={{
-        flex: 1,
-        minHeight: '200px',
-        border: '2px dashed #3a3a5a',
-        borderRadius: '8px',
+    <div style={{
+      background: '#12121f',
+      borderRadius: '16px',
+      padding: '24px',
+      border: '2px solid #2a2a4a',
+    }}>
+      {/* Apartment header */}
+      <div style={{
         display: 'flex',
-        flexDirection: 'column',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        background: '#1a1a2e',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#4ecdc4';
-        e.currentTarget.style.background = '#1f1f3a';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#3a3a5a';
-        e.currentTarget.style.background = '#1a1a2e';
-      }}
-    >
-      <div style={{ fontSize: '32px', marginBottom: '8px' }}>➕</div>
-      <div style={{ color: '#888', fontSize: '14px' }}>Empty Slot {index + 1}</div>
-      <div style={{ color: '#666', fontSize: '12px' }}>Click to add business</div>
+        marginBottom: '20px',
+        paddingBottom: '16px',
+        borderBottom: '1px solid #2a2a4a',
+      }}>
+        <div>
+          <div style={{ fontSize: '18px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>
+            🏠 {housing.name}
+          </div>
+          <div style={{ fontSize: '13px', color: '#888' }}>
+            {businesses.length}/{slots} hobby space{slots > 1 ? 's' : ''} used
+          </div>
+        </div>
+        <div style={{ 
+          background: '#1a1a2e', 
+          padding: '8px 16px', 
+          borderRadius: '8px',
+          fontSize: '13px',
+          color: '#888',
+        }}>
+          Rent: ${housing.rentPerDay}/day
+        </div>
+      </div>
+
+      {/* Room layout */}
+      <div style={{
+        display: 'grid',
+        gap: '16px',
+        ...getLayoutStyle(),
+        margin: '0 auto',
+      }}>
+        {/* Render active businesses */}
+        {businesses.map((bizId) => (
+          <div
+            key={bizId}
+            onClick={() => onClickBusiness(bizId)}
+            style={{
+              aspectRatio: '1',
+              background: 'linear-gradient(135deg, #1f3a2f 0%, #1a2e1a 100%)',
+              borderRadius: '12px',
+              border: '2px solid #2d5a3d',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              minHeight: '150px',
+            }}
+          >
+            <div style={{ fontSize: '36px', marginBottom: '8px' }}>
+              {bizId === 'herbs' ? '🌱' : '📦'}
+            </div>
+            <div style={{ color: '#4ecdc4', fontSize: '14px', fontWeight: 600 }}>
+              {bizId === 'herbs' ? 'Container Farm' : bizId}
+            </div>
+            <div style={{ color: '#888', fontSize: '11px', marginTop: '4px' }}>
+              Click to manage
+            </div>
+          </div>
+        ))}
+
+        {/* Render empty spaces */}
+        {Array.from({ length: emptySlots }).map((_, i) => (
+          <div
+            key={`empty-${i}`}
+            onClick={() => onClickSpace(businesses.length + i)}
+            style={{
+              aspectRatio: '1',
+              background: '#1a1a2e',
+              borderRadius: '12px',
+              border: '2px dashed #3a3a5a',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              minHeight: '150px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#4ecdc4';
+              e.currentTarget.style.background = '#1f1f3a';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#3a3a5a';
+              e.currentTarget.style.background = '#1a1a2e';
+            }}
+          >
+            <div style={{ fontSize: '28px', marginBottom: '8px', opacity: 0.5 }}>➕</div>
+            <div style={{ color: '#666', fontSize: '13px' }}>Empty Space</div>
+            <div style={{ color: '#555', fontSize: '11px', marginTop: '4px' }}>
+              Click to start a hobby
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -141,6 +236,7 @@ function Home() {
   const [showBusinessPicker, setShowBusinessPicker] = useState(false);
   const [businesses, setBusinesses] = useState<string[]>([]);
   const [money, setMoney] = useState(getMoney());
+  const [activeBusiness, setActiveBusiness] = useState<string | null>(null);
   
   useEffect(() => {
     const unsubscribe = gameLoop.register(() => {
@@ -150,8 +246,48 @@ function Home() {
     return unsubscribe;
   }, []);
 
-  const slots = housing.slots;
-  const usedSlots = businesses.filter(b => b !== null).length;
+  // If viewing a specific business, show its full UI
+  if (activeBusiness) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%)',
+        color: '#fff',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}>
+        <GameHeader />
+        
+        {/* Back button */}
+        <div style={{
+          padding: '12px 20px',
+          background: '#12121f',
+          borderBottom: '1px solid #2a2a4a',
+        }}>
+          <button
+            onClick={() => setActiveBusiness(null)}
+            style={{
+              background: 'transparent',
+              border: '1px solid #3a3a5a',
+              color: '#888',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            ← Back to Apartment
+          </button>
+        </div>
+        
+        {/* Business UI */}
+        <div style={{ padding: '20px' }}>
+          {activeBusiness === 'herbs' && <ContainerFarm />}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -162,53 +298,14 @@ function Home() {
     }}>
       <GameHeader />
       
-      {/* Slot indicator */}
-      <div style={{
-        padding: '12px 20px',
-        background: '#12121f',
-        borderBottom: '1px solid #2a2a4a',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <div style={{ color: '#888', fontSize: '14px' }}>
-          🏠 {usedSlots}/{slots} hobby slots used
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {Array.from({ length: slots }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '2px',
-                background: i < usedSlots ? '#4ecdc4' : '#3a3a5a',
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Business grid */}
-      <div style={{ padding: '20px' }}>
-        {/* Render active businesses */}
-        {businesses.map((bizId, i) => (
-          <div key={bizId} style={{ marginBottom: '20px' }}>
-            {bizId === 'herbs' && <ContainerFarm />}
-            {/* Add more business types here as they're implemented */}
-          </div>
-        ))}
-        
-        {/* Render empty slots */}
-        {Array.from({ length: slots - usedSlots }).map((_, i) => (
-          <div key={`empty-${i}`} style={{ marginBottom: '20px' }}>
-            <BusinessSlot
-              index={usedSlots + i}
-              business={null}
-              onSelect={() => setShowBusinessPicker(true)}
-            />
-          </div>
-        ))}
+      {/* Apartment layout */}
+      <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+        <ApartmentLayout
+          housing={housing}
+          businesses={businesses}
+          onClickSpace={() => setShowBusinessPicker(true)}
+          onClickBusiness={(bizId) => setActiveBusiness(bizId)}
+        />
       </div>
 
       {/* Business picker modal */}
