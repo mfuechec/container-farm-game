@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { initEngine, shutdownEngine, gameLoop, getPlayerState, getMoney, getHousing, getJob, getDailyBalance } from './engine';
+import { initEngine, shutdownEngine, gameLoop, getPlayerState, getMoney, getHousing, getJob, getDailyBalance, spendMoney } from './engine';
 import ContainerFarm from './businesses/herbs/ContainerFarm';
 
 // Game time display component
@@ -116,24 +116,38 @@ function BusinessSlot({
   );
 }
 
+// Available businesses to start
+const AVAILABLE_BUSINESSES = [
+  {
+    id: 'herbs',
+    name: 'Container Farm',
+    description: 'Grow herbs in containers. Breed for better genetics, sell at the farmers market.',
+    setupCost: 200,
+    icon: '🌱',
+  },
+  {
+    id: 'mushrooms',
+    name: 'Mushroom Farm',
+    description: 'Coming soon! Grow gourmet mushrooms.',
+    setupCost: 150,
+    icon: '🍄',
+    disabled: true,
+  },
+];
+
 // Main Home view
 function Home() {
   const [housing, setHousing] = useState(getHousing());
   const [showBusinessPicker, setShowBusinessPicker] = useState(false);
-  const [businesses, setBusinesses] = useState<(string | null)[]>([]);
+  const [businesses, setBusinesses] = useState<string[]>([]);
+  const [money, setMoney] = useState(getMoney());
   
   useEffect(() => {
     const unsubscribe = gameLoop.register(() => {
       setHousing(getHousing());
+      setMoney(getMoney());
     });
     return unsubscribe;
-  }, []);
-
-  // Initialize with one herb farm
-  useEffect(() => {
-    if (businesses.length === 0) {
-      setBusinesses(['herbs']);
-    }
   }, []);
 
   const slots = housing.slots;
@@ -177,36 +191,32 @@ function Home() {
 
       {/* Business grid */}
       <div style={{ padding: '20px' }}>
-        {businesses.map((biz, i) => (
-          <div key={i} style={{ marginBottom: '20px' }}>
-            {biz === 'herbs' ? (
-              <ContainerFarm />
-            ) : (
-              <BusinessSlot
-                index={i}
-                business={null}
-                onSelect={() => setShowBusinessPicker(true)}
-              />
-            )}
+        {/* Render active businesses */}
+        {businesses.map((bizId, i) => (
+          <div key={bizId} style={{ marginBottom: '20px' }}>
+            {bizId === 'herbs' && <ContainerFarm />}
+            {/* Add more business types here as they're implemented */}
           </div>
         ))}
         
-        {/* Add more slots if available */}
-        {usedSlots < slots && (
-          <BusinessSlot
-            index={usedSlots}
-            business={null}
-            onSelect={() => setShowBusinessPicker(true)}
-          />
-        )}
+        {/* Render empty slots */}
+        {Array.from({ length: slots - usedSlots }).map((_, i) => (
+          <div key={`empty-${i}`} style={{ marginBottom: '20px' }}>
+            <BusinessSlot
+              index={usedSlots + i}
+              business={null}
+              onSelect={() => setShowBusinessPicker(true)}
+            />
+          </div>
+        ))}
       </div>
 
-      {/* Business picker modal (placeholder) */}
+      {/* Business picker modal */}
       {showBusinessPicker && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.8)',
+          background: 'rgba(0,0,0,0.85)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -216,26 +226,94 @@ function Home() {
             background: '#1a1a2e',
             borderRadius: '12px',
             padding: '24px',
-            maxWidth: '400px',
+            maxWidth: '500px',
             width: '90%',
+            border: '1px solid #2a2a4a',
           }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', color: '#fff' }}>Choose a Business</h2>
-            <div style={{ color: '#888', marginBottom: '16px' }}>
-              More businesses coming soon! For now, you have Container Farm.
+            <h2 style={{ margin: '0 0 8px', color: '#fff' }}>Start a Business</h2>
+            <p style={{ color: '#888', margin: '0 0 20px', fontSize: '14px' }}>
+              Choose a hobby to turn into a side hustle
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {AVAILABLE_BUSINESSES.map(biz => {
+                const canAfford = money >= biz.setupCost;
+                const alreadyHas = businesses.includes(biz.id);
+                const isDisabled = biz.disabled || !canAfford || alreadyHas;
+                
+                return (
+                  <div
+                    key={biz.id}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      if (spendMoney(biz.setupCost, `Started ${biz.name}`)) {
+                        setBusinesses([...businesses, biz.id]);
+                        setShowBusinessPicker(false);
+                      }
+                    }}
+                    style={{
+                      padding: '16px',
+                      background: isDisabled ? '#12121f' : '#1f1f3a',
+                      borderRadius: '8px',
+                      border: `1px solid ${isDisabled ? '#2a2a4a' : '#4ecdc4'}`,
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      opacity: isDisabled ? 0.6 : 1,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <div style={{ fontSize: '28px' }}>{biz.icon}</div>
+                        <div>
+                          <div style={{ color: '#fff', fontWeight: 600, marginBottom: '4px' }}>
+                            {biz.name}
+                          </div>
+                          <div style={{ color: '#888', fontSize: '13px', lineHeight: 1.4 }}>
+                            {biz.description}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ 
+                        background: canAfford && !biz.disabled ? '#4ecdc4' : '#3a3a5a',
+                        color: canAfford && !biz.disabled ? '#000' : '#888',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        fontSize: '14px',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        ${biz.setupCost}
+                      </div>
+                    </div>
+                    {alreadyHas && (
+                      <div style={{ color: '#4ecdc4', fontSize: '12px', marginTop: '8px' }}>
+                        ✓ Already running
+                      </div>
+                    )}
+                    {!canAfford && !alreadyHas && !biz.disabled && (
+                      <div style={{ color: '#e85d75', fontSize: '12px', marginTop: '8px' }}>
+                        Not enough money
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+            
             <button
               onClick={() => setShowBusinessPicker(false)}
               style={{
-                background: '#4ecdc4',
-                color: '#000',
-                border: 'none',
-                padding: '12px 24px',
+                marginTop: '20px',
+                background: 'transparent',
+                color: '#888',
+                border: '1px solid #3a3a5a',
+                padding: '10px 20px',
                 borderRadius: '6px',
                 cursor: 'pointer',
-                fontWeight: 600,
+                width: '100%',
               }}
             >
-              Close
+              Cancel
             </button>
           </div>
         </div>
