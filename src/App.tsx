@@ -70,7 +70,7 @@ function GameHeader() {
   );
 }
 
-// Apartment layout component
+// Blueprint-style apartment layout
 function ApartmentLayout({ 
   housing,
   businesses,
@@ -82,130 +82,290 @@ function ApartmentLayout({
   onClickSpace: (slotIndex: number) => void;
   onClickBusiness: (businessId: string) => void;
 }) {
-  const slots = housing.slots;
-  const emptySlots = slots - businesses.length;
-  
-  // Different layouts based on housing tier
-  const getLayoutStyle = () => {
-    switch (housing.id) {
-      case 1: // Studio
-        return { gridTemplateColumns: '1fr', maxWidth: '400px' };
-      case 2: // 1BR
-        return { gridTemplateColumns: '1fr 1fr', maxWidth: '600px' };
-      case 3: // 2BR
-        return { gridTemplateColumns: '1fr 1fr 1fr', maxWidth: '800px' };
-      default:
-        return { gridTemplateColumns: 'repeat(4, 1fr)', maxWidth: '1000px' };
-    }
-  };
+  const hasHobby = businesses.length > 0;
+  const hobbyBiz = businesses[0];
 
-  return (
-    <div style={{
-      background: '#12121f',
-      borderRadius: '16px',
-      padding: '24px',
-      border: '2px solid #2a2a4a',
-    }}>
-      {/* Apartment header */}
+  // Studio apartment blueprint
+  if (housing.id === 1) {
+    return (
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px',
-        paddingBottom: '16px',
-        borderBottom: '1px solid #2a2a4a',
+        background: '#0a1628',
+        borderRadius: '12px',
+        padding: '24px',
+        border: '1px solid #1a3a5c',
       }}>
-        <div>
-          <div style={{ fontSize: '18px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>
-            🏠 {housing.name}
-          </div>
-          <div style={{ fontSize: '13px', color: '#888' }}>
-            {businesses.length}/{slots} hobby space{slots > 1 ? 's' : ''} used
-          </div>
-        </div>
-        <div style={{ 
-          background: '#1a1a2e', 
-          padding: '8px 16px', 
-          borderRadius: '8px',
-          fontSize: '13px',
-          color: '#888',
+        {/* Blueprint header */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
         }}>
-          Rent: ${housing.rentPerDay}/day
+          <div style={{ 
+            color: '#4a9eff', 
+            fontSize: '14px', 
+            fontFamily: 'monospace',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+          }}>
+            ◊ {housing.name} — Floor Plan
+          </div>
+          <div style={{ 
+            color: '#3a7acc', 
+            fontSize: '12px',
+            fontFamily: 'monospace',
+          }}>
+            Rent: ${housing.rentPerDay}/day
+          </div>
         </div>
-      </div>
 
-      {/* Room layout */}
-      <div style={{
-        display: 'grid',
-        gap: '16px',
-        ...getLayoutStyle(),
-        margin: '0 auto',
-      }}>
-        {/* Render active businesses */}
-        {businesses.map((bizId) => (
-          <div
-            key={bizId}
-            onClick={() => onClickBusiness(bizId)}
-            style={{
-              aspectRatio: '1',
-              background: 'linear-gradient(135deg, #1f3a2f 0%, #1a2e1a 100%)',
-              borderRadius: '12px',
-              border: '2px solid #2d5a3d',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              minHeight: '150px',
-            }}
-          >
-            <div style={{ fontSize: '36px', marginBottom: '8px' }}>
-              {bizId === 'herbs' ? '🌱' : '📦'}
-            </div>
-            <div style={{ color: '#4ecdc4', fontSize: '14px', fontWeight: 600 }}>
-              {bizId === 'herbs' ? 'Container Farm' : bizId}
-            </div>
-            <div style={{ color: '#888', fontSize: '11px', marginTop: '4px' }}>
-              Click to manage
+        {/* Blueprint floor plan */}
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '500px',
+          margin: '0 auto',
+          aspectRatio: '4/3',
+          border: '2px solid #2a5a8c',
+          background: 'linear-gradient(135deg, #0d1f33 0%, #0a1628 100%)',
+        }}>
+          {/* Grid lines */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `
+              linear-gradient(#1a3a5c22 1px, transparent 1px),
+              linear-gradient(90deg, #1a3a5c22 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px',
+          }} />
+
+          {/* Bathroom - top right corner */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: '25%',
+            height: '35%',
+            borderLeft: '2px solid #2a5a8c',
+            borderBottom: '2px solid #2a5a8c',
+          }}>
+            <div style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              left: '50%', 
+              transform: 'translate(-50%, -50%)',
+              color: '#3a7acc',
+              fontSize: '10px',
+              fontFamily: 'monospace',
+              textAlign: 'center',
+            }}>
+              🚿<br/>BATH
             </div>
           </div>
-        ))}
 
-        {/* Render empty spaces */}
-        {Array.from({ length: emptySlots }).map((_, i) => (
+          {/* Kitchen - bottom left */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '40%',
+            height: '30%',
+            borderTop: '2px dashed #2a5a8c44',
+            borderRight: '2px dashed #2a5a8c44',
+          }}>
+            <div style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              left: '50%', 
+              transform: 'translate(-50%, -50%)',
+              color: '#3a7acc',
+              fontSize: '10px',
+              fontFamily: 'monospace',
+              textAlign: 'center',
+            }}>
+              🍳 KITCHEN
+            </div>
+          </div>
+
+          {/* Bed area - top left */}
+          <div style={{
+            position: 'absolute',
+            top: '10%',
+            left: '5%',
+            width: '35%',
+            height: '40%',
+          }}>
+            <div style={{
+              width: '100%',
+              height: '100%',
+              border: '1px solid #2a5a8c',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#3a7acc',
+              fontSize: '10px',
+              fontFamily: 'monospace',
+            }}>
+              🛏️ BED
+            </div>
+          </div>
+
+          {/* Door */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            right: '30%',
+            width: '15%',
+            height: '4px',
+            background: '#4a9eff',
+          }}>
+            <div style={{
+              position: 'absolute',
+              bottom: '8px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: '#4a9eff',
+              fontSize: '8px',
+              fontFamily: 'monospace',
+              whiteSpace: 'nowrap',
+            }}>
+              🚪 ENTRY
+            </div>
+          </div>
+
+          {/* HOBBY SPACE - bottom right, clickable */}
           <div
-            key={`empty-${i}`}
-            onClick={() => onClickSpace(businesses.length + i)}
+            onClick={() => hasHobby ? onClickBusiness(hobbyBiz) : onClickSpace(0)}
             style={{
-              aspectRatio: '1',
-              background: '#1a1a2e',
-              borderRadius: '12px',
-              border: '2px dashed #3a3a5a',
+              position: 'absolute',
+              bottom: '8%',
+              right: '5%',
+              width: '45%',
+              height: '55%',
+              border: hasHobby ? '2px solid #4ecdc4' : '2px dashed #4ecdc4',
+              borderRadius: '4px',
+              background: hasHobby 
+                ? 'linear-gradient(135deg, #1a3a2f 0%, #0d2818 100%)' 
+                : 'rgba(78, 205, 196, 0.05)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              minHeight: '150px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#4ecdc4';
-              e.currentTarget.style.background = '#1f1f3a';
+              e.currentTarget.style.background = hasHobby 
+                ? 'linear-gradient(135deg, #1f4a3a 0%, #0f3020 100%)'
+                : 'rgba(78, 205, 196, 0.1)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(78, 205, 196, 0.3)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#3a3a5a';
-              e.currentTarget.style.background = '#1a1a2e';
+              e.currentTarget.style.background = hasHobby 
+                ? 'linear-gradient(135deg, #1a3a2f 0%, #0d2818 100%)'
+                : 'rgba(78, 205, 196, 0.05)';
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <div style={{ fontSize: '28px', marginBottom: '8px', opacity: 0.5 }}>➕</div>
-            <div style={{ color: '#666', fontSize: '13px' }}>Empty Space</div>
-            <div style={{ color: '#555', fontSize: '11px', marginTop: '4px' }}>
-              Click to start a hobby
-            </div>
+            {hasHobby ? (
+              <>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>
+                  {hobbyBiz === 'herbs' ? '🌱' : '📦'}
+                </div>
+                <div style={{ 
+                  color: '#4ecdc4', 
+                  fontSize: '11px', 
+                  fontFamily: 'monospace',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                }}>
+                  {hobbyBiz === 'herbs' ? 'CONTAINER FARM' : hobbyBiz.toUpperCase()}
+                </div>
+                <div style={{ 
+                  color: '#3a7acc', 
+                  fontSize: '9px', 
+                  fontFamily: 'monospace',
+                  marginTop: '4px',
+                }}>
+                  [ click to manage ]
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ 
+                  color: '#4ecdc4', 
+                  fontSize: '10px', 
+                  fontFamily: 'monospace',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  marginBottom: '8px',
+                }}>
+                  ◇ Hobby Space ◇
+                </div>
+                <div style={{ fontSize: '24px', opacity: 0.6 }}>➕</div>
+                <div style={{ 
+                  color: '#3a7acc', 
+                  fontSize: '9px', 
+                  fontFamily: 'monospace',
+                  marginTop: '8px',
+                }}>
+                  [ click to start ]
+                </div>
+              </>
+            )}
           </div>
-        ))}
+
+          {/* Window indicators */}
+          <div style={{
+            position: 'absolute',
+            top: '30%',
+            right: 0,
+            width: '4px',
+            height: '20%',
+            background: '#4a9eff55',
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: '20%',
+            left: 0,
+            width: '4px',
+            height: '25%',
+            background: '#4a9eff55',
+          }} />
+        </div>
+
+        {/* Blueprint footer */}
+        <div style={{
+          marginTop: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          color: '#3a7acc',
+          fontSize: '10px',
+          fontFamily: 'monospace',
+        }}>
+          <span>SCALE: NOT TO SCALE</span>
+          <span>{businesses.length}/1 HOBBY SPACE</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback for other housing tiers (TODO: add more blueprints)
+  return (
+    <div style={{
+      background: '#0a1628',
+      borderRadius: '12px',
+      padding: '24px',
+      border: '1px solid #1a3a5c',
+      textAlign: 'center',
+      color: '#4a9eff',
+      fontFamily: 'monospace',
+    }}>
+      <div style={{ marginBottom: '16px' }}>◊ {housing.name} — Floor Plan</div>
+      <div style={{ color: '#3a7acc', fontSize: '12px' }}>
+        Blueprint coming soon! ({housing.slots} hobby spaces)
       </div>
     </div>
   );
