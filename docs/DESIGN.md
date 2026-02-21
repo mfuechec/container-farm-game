@@ -238,36 +238,44 @@ interface GameSave {
 
 ## Development Phases
 
-### Phase 0: Foundation (Current)
+### Phase 0: Foundation ✅
 - [x] Container Farm prototype
-- [ ] Tauri scaffold
-- [ ] Shared game engine (tick, save, events)
-- [ ] Home view with business slots
-- [ ] Day job + rent + economy basics
+- [x] Shared game engine (tick, save, events)
+- [x] Blueprint-style apartment view
+- [x] Business picker modal
+- [x] Header with day/housing/job/money
+- [x] Click hobby space → start business flow
+
+### Phase 0.5: Wire It Up (Current)
+- [ ] Daily economy tick actually deducting rent/adding job income
+- [ ] Business state persisting in save
+- [ ] Time actually advancing (verify 1hr = 1 day)
+- [ ] Tauri scaffold (desktop app)
 
 ### Phase 1: Core Loop
-- [ ] Housing upgrades
-- [ ] Second business (Mushrooms)
-- [ ] Synergy: mushroom waste → herb compost
-- [ ] Soft failure + recovery
-- [ ] Steam build + tray icon
+- [ ] Housing upgrades (click to upgrade when you can afford)
+- [ ] Second business (Mushrooms) - faster cycle, different mechanics
+- [ ] Synergy: mushroom waste → herb compost boost
+- [ ] Soft failure + recovery (can't pay rent → reset)
+- [ ] Desktop notifications ("Herbs ready!")
 
 ### Phase 2: Depth
 - [ ] Third business (Woodworking or Shrimp)
-- [ ] Quit job mechanic
+- [ ] Quit job mechanic + full-time bonuses
 - [ ] Achievements
+- [ ] Steam build + tray icon
 - [ ] Steam Cloud saves
 
 ### Phase 3: Polish
 - [ ] Sound design
-- [ ] Notifications ("Herbs ready!")
 - [ ] Tutorial / onboarding
-- [ ] Steam Deck UI
+- [ ] More apartment blueprints (1BR, 2BR, houses)
+- [ ] Steam Deck UI / controller support
 
 ### Phase 4+: Multiplayer Economy
 - [ ] Player marketplace
 - [ ] Supply/demand pricing
-- [ ] Trading
+- [ ] Trading between players
 
 ---
 
