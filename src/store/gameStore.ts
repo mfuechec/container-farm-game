@@ -180,11 +180,55 @@ export const useGameStore = create<GameStore>()(
           newMoney -= weeklyExpenses;
         }
         
+        // Grow plants
+        const { plantHobby } = state;
+        let plantsChanged = false;
+        const newPlants: Record<string, PlantInstance> = {};
+        
+        for (const [id, plant] of Object.entries(plantHobby.plants)) {
+          if (plant.stage === 'harvestable') {
+            newPlants[id] = plant;
+            continue;
+          }
+          
+          const plantType = getPlantType(plant.typeId);
+          if (!plantType) {
+            newPlants[id] = plant;
+            continue;
+          }
+          
+          // Calculate growth rate
+          let growthRate = 1 / plantType.daysToMature;
+          if (plant.hasLight) growthRate *= plantHobby.light.growthBoost;
+          else growthRate *= 0.5;
+          
+          const pot = plantHobby.pots.find(p => p.plant === id);
+          if (pot) {
+            const potType = getPotType(pot.typeId);
+            if (potType) growthRate *= potType.growthModifier;
+          }
+          
+          const newProgress = Math.min(1, plant.growthProgress + growthRate * daysPassed);
+          if (newProgress !== plant.growthProgress) {
+            plantsChanged = true;
+            newPlants[id] = {
+              ...plant,
+              growthProgress: newProgress,
+              stage: getGrowthStage(newProgress),
+            };
+          } else {
+            newPlants[id] = plant;
+          }
+        }
+        
         set({
           kitchen: newKitchen,
           economy: { ...state.economy, money: newMoney },
           gameDay: newDay,
           lastTick: now,
+          plantHobby: plantsChanged 
+            ? { ...plantHobby, plants: newPlants }
+            : plantHobby,
         });
       },
       

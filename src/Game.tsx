@@ -15,6 +15,7 @@ import { ApartmentView } from './apartment/ApartmentView';
 import { PlantHobby } from './hobbies/plants/PlantHobby';
 import { HobbySlot } from './apartment/types';
 import { calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier } from './kitchen/types';
+// getActiveKitchenBonuses, getBonusMultiplier used for derived values display
 
 // Tick interval
 const TICK_INTERVAL = 1000;
@@ -48,17 +49,12 @@ export function Game() {
   // Game tick - handle time passing (runs once on mount)
   useEffect(() => {
     const interval = setInterval(() => {
-      // Access store directly to avoid stale closures
-      const store = useGameStore.getState();
-      store.tick();
-      // Get current growth multiplier from kitchen state
-      const bonuses = getActiveKitchenBonuses(store.kitchen.storage);
-      const mult = getBonusMultiplier(bonuses, 'growth');
-      store.growPlants(mult);
+      // tick() handles everything: time, kitchen decay, plant growth
+      useGameStore.getState().tick();
     }, TICK_INTERVAL);
     
     return () => clearInterval(interval);
-  }, []); // Empty deps - only run once
+  }, []);
 
   // Navigation handlers
   const handleSelectHobby = (slot: HobbySlot) => {
