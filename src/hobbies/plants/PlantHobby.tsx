@@ -371,35 +371,12 @@ export function PlantHobby({
       {/* Content */}
       <div style={{ padding: 16 }}>
         {tab === 'grow' && (
-          <>
-            {/* Light coverage bar */}
-            <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-              {slots.map((s, i) => (
-                <div key={i} style={{
-                  flex: 1,
-                  height: 4,
-                  borderRadius: 2,
-                  background: s.hasLight ? `${theme.money}88` : theme.border,
-                }} />
-              ))}
-            </div>
-
-            {/* Pot grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${Math.min(table.potSlots, 4)}, 1fr)`,
-              gap: 10,
-            }}>
-              {slots.map(slot => (
-                <PotSlot
-                  key={slot.index}
-                  slot={slot}
-                  onClick={() => handleSlotClick(slot.index)}
-                  theme={theme}
-                />
-              ))}
-            </div>
-          </>
+          <GrowArea
+            slots={slots}
+            onSlotClick={handleSlotClick}
+            lightCoverage={light.coverage}
+            theme={theme}
+          />
         )}
 
         {tab === 'harvest' && (
@@ -529,8 +506,63 @@ export function PlantHobby({
   );
 }
 
-// Pot slot component
-function PotSlot({
+// Visual Grow Light component
+function GrowLight({ coverage, totalSlots, theme }: { coverage: number; totalSlots: number; theme: any }) {
+  const width = Math.min(400, totalSlots * 80 + 40);
+  const intensity = coverage / totalSlots;
+  const glowColor = `rgba(255, 200, 100, ${intensity * 0.5})`;
+  const lightColor = intensity > 0.5 ? '#FFD54F' : intensity > 0.2 ? '#FFA726' : '#5D4037';
+  
+  return (
+    <div style={{ width: '100%', maxWidth: width, margin: '0 auto', position: 'relative' }}>
+      {/* Light glow effect */}
+      {intensity > 0.1 && (
+        <div style={{
+          position: 'absolute',
+          top: 35,
+          left: '15%',
+          width: '70%',
+          height: 150,
+          background: `linear-gradient(180deg, ${glowColor} 0%, transparent 100%)`,
+          pointerEvents: 'none',
+          borderRadius: '50%',
+        }} />
+      )}
+      
+      <svg width="100%" height={40} viewBox={`0 0 ${width} 40`} preserveAspectRatio="xMidYMid meet">
+        {/* Mounting bar */}
+        <rect x={width * 0.1} y={0} width={width * 0.8} height={6} rx={2} fill="#37474F" />
+        
+        {/* Cables */}
+        <line x1={width * 0.2} y1={6} x2={width * 0.2} y2={14} stroke="#212121" strokeWidth={2} />
+        <line x1={width * 0.8} y1={6} x2={width * 0.8} y2={14} stroke="#212121" strokeWidth={2} />
+        
+        {/* Light fixture */}
+        <rect x={width * 0.1} y={14} width={width * 0.8} height={14} rx={3} fill="#455A64" stroke="#37474F" />
+        
+        {/* Light panels */}
+        {[0.15, 0.32, 0.49, 0.66, 0.83].slice(0, Math.ceil(coverage * 1.5)).map((pos, i) => (
+          <rect
+            key={i}
+            x={width * pos}
+            y={18}
+            width={width * 0.1}
+            height={6}
+            rx={1}
+            fill={lightColor}
+            style={{ filter: intensity > 0.3 ? `drop-shadow(0 0 ${3 * intensity}px ${lightColor})` : 'none' }}
+          />
+        ))}
+        
+        {/* Power LED */}
+        <circle cx={width * 0.93} cy={21} r={2} fill={intensity > 0.1 ? '#4CAF50' : '#757575'} />
+      </svg>
+    </div>
+  );
+}
+
+// Visual Pot component with terracotta pot and growing plant
+function VisualPot({
   slot,
   onClick,
   theme,
@@ -540,72 +572,282 @@ function PotSlot({
   theme: any;
 }) {
   const plantType = slot.plant ? getPlantType(slot.plant.typeId) : null;
-
-  if (!slot.pot) {
-    return (
-      <div onClick={onClick} style={{
-        aspectRatio: '1',
-        border: `2px dashed ${theme.border}`,
-        borderRadius: theme.radiusMd,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        color: theme.textMuted,
-      }}>
-        <span style={{ fontSize: 20 }}>➕</span>
-        <span style={{ fontSize: 10 }}>$5</span>
-      </div>
-    );
+  const width = 70;
+  const height = 100;
+  const potHeight = 45;
+  
+  // Generate plant graphics
+  let plantGraphic = null;
+  if (slot.plant && plantType) {
+    const growth = slot.plant.growthProgress;
+    const stage = slot.plant.stage;
+    
+    // Plant colors vary slightly by type
+    const hueOffset = plantType.id === 'basil' ? 0 : plantType.id === 'mint' ? -10 : 10;
+    const leafHue = 115 + hueOffset;
+    const leafColor = `hsl(${leafHue}, 55%, 40%)`;
+    const stemColor = `hsl(${leafHue + 15}, 35%, 30%)`;
+    
+    if (stage === 'seed') {
+      // Just soil with a tiny sprout
+      plantGraphic = (
+        <g>
+          <line x1={width/2} y1={potHeight - 5} x2={width/2} y2={potHeight - 10} stroke={stemColor} strokeWidth={1.5} strokeLinecap="round" />
+          <ellipse cx={width/2} cy={potHeight - 12} rx={4} ry={3} fill={leafColor} opacity={0.7} />
+        </g>
+      );
+    } else {
+      // Growing plant
+      const stemHeight = 15 + growth * 35;
+      const leafCount = Math.floor(2 + growth * 5);
+      const leafSize = 6 + growth * 8;
+      
+      const leaves = [];
+      for (let i = 0; i < leafCount; i++) {
+        const tier = Math.floor(i / 2);
+        const y = potHeight - 8 - (tier + 1) * (stemHeight / (leafCount / 2 + 1));
+        const isLeft = i % 2 === 0;
+        const xOffset = (leafSize * 0.5) * (isLeft ? -1 : 1);
+        const rotation = isLeft ? -35 : 35;
+        
+        leaves.push(
+          <ellipse
+            key={i}
+            cx={width/2 + xOffset}
+            cy={y}
+            rx={leafSize * 0.65}
+            ry={leafSize * 0.4}
+            fill={leafColor}
+            transform={`rotate(${rotation}, ${width/2 + xOffset}, ${y})`}
+            style={{ filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.15))' }}
+          />
+        );
+      }
+      
+      plantGraphic = (
+        <g>
+          {/* Stem */}
+          <line
+            x1={width/2}
+            y1={potHeight - 5}
+            x2={width/2}
+            y2={potHeight - 5 - stemHeight}
+            stroke={stemColor}
+            strokeWidth={2 + growth}
+            strokeLinecap="round"
+          />
+          {/* Leaves */}
+          {leaves}
+          {/* Flower/bud for harvestable */}
+          {stage === 'harvestable' && (
+            <circle
+              cx={width/2}
+              cy={potHeight - 5 - stemHeight - 4}
+              r={5}
+              fill={`hsl(${leafHue - 30}, 60%, 50%)`}
+              style={{ filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.3))' }}
+            />
+          )}
+        </g>
+      );
+    }
   }
-
-  if (!slot.plant) {
-    return (
-      <div onClick={onClick} style={{
-        aspectRatio: '1',
-        border: `2px solid ${theme.border}`,
-        borderRadius: theme.radiusMd,
-        background: theme.bgAlt,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
+  
+  const isReady = slot.plant?.stage === 'harvestable';
+  const isEmpty = !slot.pot;
+  const isEmptyPot = slot.pot && !slot.plant;
+  
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        width,
         cursor: 'pointer',
         position: 'relative',
+        transition: 'transform 0.15s ease',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
+      onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+    >
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        {/* Pot and plant container */}
+        <g transform={`translate(0, ${height - potHeight - 5})`}>
+          {/* Plant (rendered behind pot rim) */}
+          {plantGraphic}
+          
+          {/* Terracotta pot */}
+          <defs>
+            <linearGradient id={`potGrad${slot.index}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#A0522D" />
+              <stop offset="35%" stopColor="#CD7F32" />
+              <stop offset="65%" stopColor="#CD7F32" />
+              <stop offset="100%" stopColor="#8B4513" />
+            </linearGradient>
+          </defs>
+          
+          {isEmpty ? (
+            // Empty slot - dashed outline
+            <g>
+              <rect
+                x={10}
+                y={10}
+                width={width - 20}
+                height={potHeight - 10}
+                rx={4}
+                fill="none"
+                stroke={theme.border}
+                strokeWidth={2}
+                strokeDasharray="6 4"
+              />
+              <text x={width/2} y={potHeight/2 + 5} textAnchor="middle" fill={theme.textMuted} fontSize={10}>$5</text>
+            </g>
+          ) : (
+            // Pot body
+            <g>
+              <path
+                d={`
+                  M ${width * 0.18} 4
+                  L ${width * 0.12} ${potHeight - 8}
+                  Q ${width * 0.12} ${potHeight} ${width * 0.22} ${potHeight}
+                  L ${width * 0.78} ${potHeight}
+                  Q ${width * 0.88} ${potHeight} ${width * 0.88} ${potHeight - 8}
+                  L ${width * 0.82} 4
+                  Z
+                `}
+                fill={`url(#potGrad${slot.index})`}
+                stroke="#8B5A2B"
+                strokeWidth={1}
+              />
+              
+              {/* Pot rim */}
+              <ellipse cx={width/2} cy={4} rx={width * 0.38} ry={5} fill="#CD7F32" stroke="#8B5A2B" strokeWidth={1} />
+              
+              {/* Soil */}
+              <ellipse cx={width/2} cy={6} rx={width * 0.32} ry={3} fill="#3E2723" />
+              
+              {/* Pot highlight */}
+              <path
+                d={`M ${width * 0.22} 10 Q ${width * 0.18} ${potHeight/2} ${width * 0.2} ${potHeight - 10}`}
+                fill="none"
+                stroke="rgba(255,255,255,0.12)"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+              />
+            </g>
+          )}
+        </g>
+        
+        {/* Light indicator */}
+        {slot.hasLight && slot.pot && (
+          <circle cx={width - 8} cy={8} r={5} fill="#FFD54F" opacity={0.8} style={{ filter: 'drop-shadow(0 0 3px #FFD54F)' }} />
+        )}
+        
+        {/* Ready pulse */}
+        {isReady && (
+          <circle
+            cx={width/2}
+            cy={height - potHeight}
+            r={8}
+            fill="none"
+            stroke={theme.accent}
+            strokeWidth={2}
+            opacity={0.7}
+          >
+            <animate attributeName="r" from="8" to="18" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" from="0.7" to="0" dur="1.2s" repeatCount="indefinite" />
+          </circle>
+        )}
+      </svg>
+      
+      {/* Status text */}
+      <div style={{
+        textAlign: 'center',
+        fontSize: 10,
+        fontFamily: 'monospace',
+        marginTop: -2,
+        color: isReady ? theme.accent : isEmpty ? theme.textMuted : theme.textSecondary,
+        fontWeight: isReady ? 600 : 400,
       }}>
-        {slot.hasLight && <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 10 }}>☀️</span>}
-        <span style={{ fontSize: 20 }}>🪴</span>
-        <span style={{ fontSize: 10, color: theme.accent }}>Plant</span>
+        {isEmpty ? '' : isEmptyPot ? 'empty' : isReady ? 'harvest!' : `${Math.round(slot.plant!.growthProgress * 100)}%`}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  const progress = Math.round(slot.plant.growthProgress * 100);
-  const isReady = slot.plant.stage === 'harvestable';
-
+// Visual table surface
+function WoodenTable({ width, theme }: { width: number; theme: any }) {
+  const woodColor = theme.name === 'dark' ? '#5D4037' : '#8D6E63';
+  const woodDark = theme.name === 'dark' ? '#3E2723' : '#5D4037';
+  const woodLight = theme.name === 'dark' ? '#6D4C41' : '#A1887F';
+  
   return (
-    <div onClick={onClick} style={{
-      aspectRatio: '1',
-      border: `2px solid ${isReady ? theme.accent : theme.border}`,
-      borderRadius: theme.radiusMd,
-      background: isReady ? theme.accentLight : theme.bgAlt,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: isReady ? 'pointer' : 'default',
-      position: 'relative',
-    }}>
-      {slot.hasLight && <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 10 }}>☀️</span>}
-      <span style={{ fontSize: slot.plant.stage === 'seed' ? 16 : 24 }}>
-        {slot.plant.stage === 'seed' ? '🫘' : plantType?.emoji}
-      </span>
-      {isReady ? (
-        <span style={{ fontSize: 10, color: theme.accent, fontWeight: 600 }}>Harvest!</span>
-      ) : (
-        <span style={{ fontSize: 10, color: theme.textMuted }}>{progress}%</span>
-      )}
+    <svg width="100%" height={25} viewBox={`0 0 ${width} 25`} preserveAspectRatio="none" style={{ display: 'block' }}>
+      <defs>
+        <pattern id="woodPattern" patternUnits="userSpaceOnUse" width={80} height={25}>
+          <rect width={80} height={25} fill={woodColor} />
+          <line x1={0} y1={5} x2={80} y2={5} stroke={woodLight} strokeWidth={1} opacity={0.25} />
+          <line x1={0} y1={12} x2={80} y2={12} stroke={woodDark} strokeWidth={1.5} opacity={0.35} />
+          <line x1={0} y1={19} x2={80} y2={19} stroke={woodLight} strokeWidth={1} opacity={0.2} />
+        </pattern>
+      </defs>
+      <rect x={0} y={0} width={width} height={18} fill="url(#woodPattern)" />
+      <rect x={0} y={16} width={width} height={9} fill={woodDark} />
+    </svg>
+  );
+}
+
+// Combined grow area with table, pots, and light
+function GrowArea({
+  slots,
+  onSlotClick,
+  lightCoverage,
+  theme,
+}: {
+  slots: { index: number; pot: PotInstance | undefined; plant: PlantInstance | null; hasLight: boolean }[];
+  onSlotClick: (index: number) => void;
+  lightCoverage: number;
+  theme: any;
+}) {
+  const containerWidth = Math.min(500, slots.length * 80 + 60);
+  
+  return (
+    <div style={{ width: '100%', position: 'relative' }}>
+      {/* Grow light */}
+      <GrowLight coverage={lightCoverage} totalSlots={slots.length} theme={theme} />
+      
+      {/* Pots on table */}
+      <div style={{
+        position: 'relative',
+        maxWidth: containerWidth,
+        margin: '0 auto',
+        paddingBottom: 25,
+      }}>
+        {/* Pots row */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: 6,
+          padding: '8px 16px',
+          minHeight: 110,
+          position: 'relative',
+          zIndex: 2,
+        }}>
+          {slots.map(slot => (
+            <VisualPot
+              key={slot.index}
+              slot={slot}
+              onClick={() => onSlotClick(slot.index)}
+              theme={theme}
+            />
+          ))}
+        </div>
+        
+        {/* Table surface */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1 }}>
+          <WoodenTable width={containerWidth} theme={theme} />
+        </div>
+      </div>
     </div>
   );
 }
