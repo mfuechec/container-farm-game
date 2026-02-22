@@ -16,6 +16,7 @@ import {
   POT_TYPES, TABLE_TYPES, LIGHT_TYPES,
   getPotType, slotHasLight,
 } from './equipment';
+import { GrowCanvas } from './GrowCanvas';
 
 interface PlantHobbyProps {
   onBack: () => void;
@@ -129,12 +130,17 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
       {/* Content */}
       <div style={{ padding: 16 }}>
         {tab === 'grow' && (
-          <GrowArea
-            slots={slots}
-            onSlotClick={handleSlotClick}
-            lightCoverage={light.coverage}
-            theme={theme}
-          />
+          <div style={{ 
+            background: theme.bgAlt, 
+            borderRadius: theme.radiusMd,
+            padding: 12,
+          }}>
+            <GrowCanvas
+              width={400}
+              height={200}
+              onSlotClick={handleSlotClick}
+            />
+          </div>
         )}
 
         {tab === 'harvest' && (

@@ -11,6 +11,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "pixi.js": "^8.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.11"
