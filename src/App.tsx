@@ -1,13 +1,16 @@
 /**
  * Side Hustle Simulator - Main App
+ * Using theme context for consistent styling
  */
 
 import React, { useEffect, useState } from 'react';
+import { useTheme } from './theme';
 import { initEngine, shutdownEngine, gameLoop, getPlayerState, getMoney, getHousing, getJob, getDailyBalance, spendMoney, HousingTier, skipDay, skipWeek } from './engine';
-import ContainerFarm from './businesses/herbs/ContainerFarm';
+import { ContainerFarm } from './businesses/herbs';
 
 // Dev controls (for testing time-based mechanics)
 function DevControls() {
+  const { theme, isDark, toggleTheme } = useTheme();
   const [show, setShow] = useState(false);
   
   if (!show) {
@@ -16,16 +19,17 @@ function DevControls() {
         onClick={() => setShow(true)}
         style={{
           position: 'fixed',
-          bottom: '10px',
-          right: '10px',
-          background: '#2a2a4a',
-          color: '#888',
-          border: 'none',
+          bottom: '12px',
+          right: '12px',
+          background: theme.surface,
+          color: theme.textMuted,
+          border: `1px solid ${theme.border}`,
           padding: '8px 12px',
-          borderRadius: '4px',
+          borderRadius: theme.radiusMd,
           cursor: 'pointer',
           fontSize: '11px',
           zIndex: 1000,
+          boxShadow: theme.shadow,
         }}
       >
         🛠️ Dev
@@ -36,31 +40,51 @@ function DevControls() {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '10px',
-      right: '10px',
-      background: '#1a1a2e',
-      border: '1px solid #3a3a5a',
-      borderRadius: '8px',
-      padding: '12px',
+      bottom: '12px',
+      right: '12px',
+      background: theme.surface,
+      border: `1px solid ${theme.border}`,
+      borderRadius: theme.radiusLg,
+      padding: '16px',
       zIndex: 1000,
-      fontFamily: 'monospace',
       fontSize: '12px',
+      boxShadow: theme.shadowLg,
     }}>
-      <div style={{ color: '#888', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ 
+        color: theme.textSecondary, 
+        marginBottom: '12px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        fontWeight: 500,
+      }}>
         <span>🛠️ Dev Controls</span>
-        <button onClick={() => setShow(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
+        <button 
+          onClick={() => setShow(false)} 
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            color: theme.textMuted, 
+            cursor: 'pointer',
+            fontSize: '16px',
+            padding: '0 4px',
+          }}
+        >
+          ×
+        </button>
       </div>
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
         <button
           onClick={() => { skipDay(); console.log('[Dev] Skipped 1 day'); }}
           style={{
-            background: '#4ecdc4',
-            color: '#000',
+            background: theme.accent,
+            color: theme.textInverse,
             border: 'none',
-            padding: '6px 12px',
-            borderRadius: '4px',
+            padding: '8px 14px',
+            borderRadius: theme.radiusMd,
             cursor: 'pointer',
             fontWeight: 600,
+            fontSize: '13px',
           }}
         >
           +1 Day
@@ -68,20 +92,36 @@ function DevControls() {
         <button
           onClick={() => { skipWeek(); console.log('[Dev] Skipped 7 days'); }}
           style={{
-            background: '#f7b731',
-            color: '#000',
+            background: theme.money,
+            color: theme.textInverse,
             border: 'none',
-            padding: '6px 12px',
-            borderRadius: '4px',
+            padding: '8px 14px',
+            borderRadius: theme.radiusMd,
             cursor: 'pointer',
             fontWeight: 600,
+            fontSize: '13px',
           }}
         >
           +7 Days
         </button>
       </div>
-      <div style={{ color: '#666', marginTop: '8px', fontSize: '10px' }}>
-        Check console for economy logs
+      <button
+        onClick={toggleTheme}
+        style={{
+          width: '100%',
+          background: theme.bgAlt,
+          color: theme.textSecondary,
+          border: `1px solid ${theme.border}`,
+          padding: '8px 14px',
+          borderRadius: theme.radiusMd,
+          cursor: 'pointer',
+          fontSize: '12px',
+        }}
+      >
+        {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
+      </button>
+      <div style={{ color: theme.textMuted, marginTop: '10px', fontSize: '11px' }}>
+        Check console for logs
       </div>
     </div>
   );
@@ -89,6 +129,7 @@ function DevControls() {
 
 // Game time display component
 function GameHeader() {
+  const { theme } = useTheme();
   const [time, setTime] = useState(gameLoop.getGameTime());
   const [money, setMoney] = useState(getMoney());
   const [housing, setHousing] = useState(getHousing());
@@ -105,45 +146,72 @@ function GameHeader() {
   }, []);
 
   const dailyBalance = getDailyBalance();
-  const balanceColor = dailyBalance >= 0 ? '#4ecdc4' : '#e85d75';
+  const balanceColor = dailyBalance >= 0 ? theme.accent : theme.danger;
 
   return (
     <div style={{
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: '12px 20px',
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-      borderBottom: '1px solid #2a2a4a',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      padding: '16px 24px',
+      background: theme.surface,
+      borderBottom: `1px solid ${theme.border}`,
+      boxShadow: theme.shadow,
     }}>
-      <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+        {/* Date */}
         <div>
-          <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase' }}>Day</div>
-          <div style={{ fontSize: '20px', color: '#fff', fontWeight: 600 }}>
+          <div style={{ fontSize: '11px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
+            Day
+          </div>
+          <div style={{ fontSize: '18px', color: theme.text, fontWeight: 600 }}>
             {time.dayOfMonth}/{time.month}/Y{time.year}
           </div>
         </div>
+        
+        {/* Housing */}
         <div>
-          <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase' }}>Housing</div>
-          <div style={{ fontSize: '14px', color: '#fff' }}>
-            🏠 {housing.name}
+          <div style={{ fontSize: '11px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
+            Home
+          </div>
+          <div style={{ fontSize: '14px', color: theme.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>🏠</span>
+            <span>{housing.name}</span>
           </div>
         </div>
+        
+        {/* Job */}
         <div>
-          <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase' }}>Job</div>
-          <div style={{ fontSize: '14px', color: job.active ? '#4ecdc4' : '#888' }}>
-            {job.active ? `💼 ${job.name}` : '🎉 Quit!'}
+          <div style={{ fontSize: '11px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
+            Job
+          </div>
+          <div style={{ 
+            fontSize: '14px', 
+            color: job.active ? theme.text : theme.accent,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}>
+            <span>{job.active ? '💼' : '🎉'}</span>
+            <span>{job.active ? job.name : 'Full-time Hustler'}</span>
           </div>
         </div>
       </div>
       
-      <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase' }}>Balance</div>
-        <div style={{ fontSize: '24px', color: '#f7b731', fontWeight: 700 }}>
+      {/* Money */}
+      <div style={{ 
+        textAlign: 'right',
+        background: theme.moneyLight,
+        padding: '12px 20px',
+        borderRadius: theme.radiusLg,
+      }}>
+        <div style={{ fontSize: '11px', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
+          Savings
+        </div>
+        <div style={{ fontSize: '24px', color: theme.money, fontWeight: 700 }}>
           ${Math.floor(money).toLocaleString()}
         </div>
-        <div style={{ fontSize: '12px', color: balanceColor }}>
+        <div style={{ fontSize: '12px', color: balanceColor, fontWeight: 500 }}>
           {dailyBalance >= 0 ? '+' : ''}{dailyBalance.toFixed(0)}/day
         </div>
       </div>
@@ -163,85 +231,91 @@ function ApartmentLayout({
   onClickSpace: (slotIndex: number) => void;
   onClickBusiness: (businessId: string) => void;
 }) {
+  const { theme } = useTheme();
   const hasHobby = businesses.length > 0;
   const hobbyBiz = businesses[0];
 
-  // Studio apartment blueprint
+  // Studio apartment layout
   if (housing.id === 1) {
     return (
       <div style={{
-        background: '#0a1628',
-        borderRadius: '12px',
+        background: theme.surface,
+        borderRadius: theme.radiusLg,
         padding: '24px',
-        border: '1px solid #1a3a5c',
+        boxShadow: theme.shadow,
+        border: `1px solid ${theme.border}`,
       }}>
-        {/* Blueprint header */}
+        {/* Header */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '16px',
+          marginBottom: '20px',
         }}>
           <div style={{ 
-            color: '#4a9eff', 
-            fontSize: '14px', 
-            fontFamily: 'monospace',
-            textTransform: 'uppercase',
-            letterSpacing: '2px',
+            color: theme.text, 
+            fontSize: '16px', 
+            fontWeight: 600,
           }}>
-            ◊ {housing.name} — Floor Plan
+            🏠 {housing.name}
           </div>
           <div style={{ 
-            color: '#3a7acc', 
-            fontSize: '12px',
-            fontFamily: 'monospace',
+            color: theme.textSecondary, 
+            fontSize: '13px',
+            background: theme.bg,
+            padding: '6px 12px',
+            borderRadius: theme.radiusMd,
           }}>
             Rent: ${housing.rentPerDay}/day
           </div>
         </div>
 
-        {/* Blueprint floor plan */}
+        {/* Floor plan */}
         <div style={{
           position: 'relative',
           width: '100%',
-          maxWidth: '500px',
+          maxWidth: '520px',
           margin: '0 auto',
           aspectRatio: '4/3',
-          border: '2px solid #2a5a8c',
-          background: 'linear-gradient(135deg, #0d1f33 0%, #0a1628 100%)',
+          border: `2px solid ${theme.border}`,
+          borderRadius: theme.radiusLg,
+          background: theme.bgAlt,
+          overflow: 'hidden',
         }}>
-          {/* Grid lines */}
+          {/* Subtle grid pattern */}
           <div style={{
             position: 'absolute',
             inset: 0,
             backgroundImage: `
-              linear-gradient(#1a3a5c22 1px, transparent 1px),
-              linear-gradient(90deg, #1a3a5c22 1px, transparent 1px)
+              linear-gradient(${theme.borderLight} 1px, transparent 1px),
+              linear-gradient(90deg, ${theme.borderLight} 1px, transparent 1px)
             `,
-            backgroundSize: '20px 20px',
+            backgroundSize: '24px 24px',
+            opacity: 0.5,
           }} />
 
-          {/* Bathroom - top right corner */}
+          {/* Bathroom - top right */}
           <div style={{
             position: 'absolute',
             top: 0,
             right: 0,
             width: '25%',
             height: '35%',
-            borderLeft: '2px solid #2a5a8c',
-            borderBottom: '2px solid #2a5a8c',
+            borderLeft: `2px solid ${theme.border}`,
+            borderBottom: `2px solid ${theme.border}`,
+            borderBottomLeftRadius: theme.radiusMd,
+            background: theme.accentLight,
+            opacity: 0.5,
           }}>
             <div style={{ 
               position: 'absolute', 
               top: '50%', 
               left: '50%', 
               transform: 'translate(-50%, -50%)',
-              color: '#3a7acc',
-              fontSize: '10px',
-              fontFamily: 'monospace',
               textAlign: 'center',
             }}>
-              🚿<br/>BATH
+              <div style={{ fontSize: '20px', marginBottom: '4px' }}>🚿</div>
+              <div style={{ color: theme.textMuted, fontSize: '10px', fontWeight: 500 }}>Bath</div>
             </div>
           </div>
 
@@ -250,203 +324,206 @@ function ApartmentLayout({
             position: 'absolute',
             bottom: 0,
             left: 0,
-            width: '40%',
-            height: '30%',
-            borderTop: '2px dashed #2a5a8c44',
-            borderRight: '2px dashed #2a5a8c44',
+            width: '38%',
+            height: '32%',
+            borderTop: `2px dashed ${theme.border}`,
+            borderRight: `2px dashed ${theme.border}`,
+            borderTopRightRadius: theme.radiusMd,
+            background: theme.moneyLight,
+            opacity: 0.5,
           }}>
             <div style={{ 
               position: 'absolute', 
               top: '50%', 
               left: '50%', 
               transform: 'translate(-50%, -50%)',
-              color: '#3a7acc',
-              fontSize: '10px',
-              fontFamily: 'monospace',
               textAlign: 'center',
             }}>
-              🍳 KITCHEN
+              <div style={{ fontSize: '20px', marginBottom: '4px' }}>🍳</div>
+              <div style={{ color: theme.textMuted, fontSize: '10px', fontWeight: 500 }}>Kitchen</div>
             </div>
           </div>
 
           {/* Bed area - top left */}
           <div style={{
             position: 'absolute',
-            top: '10%',
+            top: '8%',
             left: '5%',
-            width: '35%',
-            height: '40%',
+            width: '32%',
+            height: '38%',
+            border: `1px solid ${theme.border}`,
+            borderRadius: theme.radiusMd,
+            background: theme.surfaceActive,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
           }}>
-            <div style={{
-              width: '100%',
-              height: '100%',
-              border: '1px solid #2a5a8c',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#3a7acc',
-              fontSize: '10px',
-              fontFamily: 'monospace',
-            }}>
-              🛏️ BED
-            </div>
+            <div style={{ fontSize: '24px', marginBottom: '4px' }}>🛏️</div>
+            <div style={{ color: theme.textMuted, fontSize: '10px', fontWeight: 500 }}>Bed</div>
           </div>
 
           {/* Door */}
           <div style={{
             position: 'absolute',
             bottom: 0,
-            right: '30%',
-            width: '15%',
-            height: '4px',
-            background: '#4a9eff',
+            right: '28%',
+            width: '14%',
+            height: '6px',
+            background: theme.accent,
+            borderTopLeftRadius: '4px',
+            borderTopRightRadius: '4px',
           }}>
             <div style={{
               position: 'absolute',
-              bottom: '8px',
+              bottom: '10px',
               left: '50%',
               transform: 'translateX(-50%)',
-              color: '#4a9eff',
-              fontSize: '8px',
-              fontFamily: 'monospace',
+              color: theme.textSecondary,
+              fontSize: '9px',
+              fontWeight: 500,
               whiteSpace: 'nowrap',
             }}>
-              🚪 ENTRY
+              🚪 Entry
             </div>
           </div>
 
-          {/* HOBBY SPACE - bottom right, clickable */}
+          {/* HOBBY SPACE - the main interactive area */}
           <div
             onClick={() => hasHobby ? onClickBusiness(hobbyBiz) : onClickSpace(0)}
             style={{
               position: 'absolute',
-              bottom: '8%',
-              right: '5%',
-              width: '45%',
-              height: '55%',
-              border: hasHobby ? '2px solid #4ecdc4' : '2px dashed #4ecdc4',
-              borderRadius: '4px',
-              background: hasHobby 
-                ? 'linear-gradient(135deg, #1a3a2f 0%, #0d2818 100%)' 
-                : 'rgba(78, 205, 196, 0.05)',
+              bottom: '10%',
+              right: '4%',
+              width: '48%',
+              height: '52%',
+              border: hasHobby ? `2px solid ${theme.accent}` : `2px dashed ${theme.accent}`,
+              borderRadius: theme.radiusLg,
+              background: hasHobby ? theme.accentLight : `${theme.accent}08`,
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: `all ${theme.transitionNormal}`,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = hasHobby 
-                ? 'linear-gradient(135deg, #1f4a3a 0%, #0f3020 100%)'
-                : 'rgba(78, 205, 196, 0.1)';
-              e.currentTarget.style.boxShadow = '0 0 20px rgba(78, 205, 196, 0.3)';
+              e.currentTarget.style.transform = 'scale(1.02)';
+              e.currentTarget.style.boxShadow = theme.shadowGlow;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = hasHobby 
-                ? 'linear-gradient(135deg, #1a3a2f 0%, #0d2818 100%)'
-                : 'rgba(78, 205, 196, 0.05)';
+              e.currentTarget.style.transform = 'scale(1)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
             {hasHobby ? (
               <>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>
+                <div style={{ fontSize: '36px', marginBottom: '8px' }}>
                   {hobbyBiz === 'herbs' ? '🌱' : '📦'}
                 </div>
                 <div style={{ 
-                  color: '#4ecdc4', 
-                  fontSize: '11px', 
-                  fontFamily: 'monospace',
+                  color: theme.accent, 
+                  fontSize: '13px', 
                   fontWeight: 600,
                   textAlign: 'center',
                 }}>
-                  {hobbyBiz === 'herbs' ? 'CONTAINER FARM' : hobbyBiz.toUpperCase()}
+                  {hobbyBiz === 'herbs' ? 'Container Farm' : hobbyBiz}
                 </div>
                 <div style={{ 
-                  color: '#3a7acc', 
-                  fontSize: '9px', 
-                  fontFamily: 'monospace',
-                  marginTop: '4px',
+                  color: theme.textSecondary, 
+                  fontSize: '11px', 
+                  marginTop: '6px',
                 }}>
-                  [ click to manage ]
+                  Click to manage →
                 </div>
               </>
             ) : (
               <>
                 <div style={{ 
-                  color: '#4ecdc4', 
-                  fontSize: '10px', 
-                  fontFamily: 'monospace',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
+                  color: theme.accent, 
+                  fontSize: '12px', 
+                  fontWeight: 500,
                   marginBottom: '8px',
                 }}>
-                  ◇ Hobby Space ◇
+                  Hobby Space
                 </div>
-                <div style={{ fontSize: '24px', opacity: 0.6 }}>➕</div>
                 <div style={{ 
-                  color: '#3a7acc', 
-                  fontSize: '9px', 
-                  fontFamily: 'monospace',
-                  marginTop: '8px',
+                  fontSize: '28px', 
+                  opacity: 0.5,
+                  marginBottom: '8px',
+                }}>➕</div>
+                <div style={{ 
+                  color: theme.textSecondary, 
+                  fontSize: '11px',
                 }}>
-                  [ click to start ]
+                  Click to start a side hustle
                 </div>
               </>
             )}
           </div>
 
-          {/* Window indicators */}
+          {/* Window indicators - warm light coming in */}
           <div style={{
             position: 'absolute',
-            top: '30%',
+            top: '25%',
             right: 0,
-            width: '4px',
-            height: '20%',
-            background: '#4a9eff55',
+            width: '5px',
+            height: '18%',
+            background: `linear-gradient(to left, ${theme.money}40, transparent)`,
+            borderTopLeftRadius: '4px',
+            borderBottomLeftRadius: '4px',
           }} />
           <div style={{
             position: 'absolute',
-            top: '20%',
+            top: '18%',
             left: 0,
-            width: '4px',
-            height: '25%',
-            background: '#4a9eff55',
+            width: '5px',
+            height: '22%',
+            background: `linear-gradient(to right, ${theme.money}40, transparent)`,
+            borderTopRightRadius: '4px',
+            borderBottomRightRadius: '4px',
           }} />
         </div>
 
-        {/* Blueprint footer */}
+        {/* Footer */}
         <div style={{
           marginTop: '16px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          color: '#3a7acc',
-          fontSize: '10px',
-          fontFamily: 'monospace',
+          color: theme.textMuted,
+          fontSize: '12px',
         }}>
-          <span>SCALE: NOT TO SCALE</span>
-          <span>{businesses.length}/1 HOBBY SPACE</span>
+          <span>Your cozy studio</span>
+          <span style={{ 
+            background: hasHobby ? theme.accentLight : theme.bg,
+            color: hasHobby ? theme.accent : theme.textMuted,
+            padding: '4px 10px',
+            borderRadius: theme.radiusSm,
+            fontWeight: 500,
+          }}>
+            {businesses.length}/1 hobby space
+          </span>
         </div>
       </div>
     );
   }
 
-  // Fallback for other housing tiers (TODO: add more blueprints)
+  // Fallback for other housing tiers
   return (
     <div style={{
-      background: '#0a1628',
-      borderRadius: '12px',
+      background: theme.surface,
+      borderRadius: theme.radiusLg,
       padding: '24px',
-      border: '1px solid #1a3a5c',
+      boxShadow: theme.shadow,
+      border: `1px solid ${theme.border}`,
       textAlign: 'center',
-      color: '#4a9eff',
-      fontFamily: 'monospace',
     }}>
-      <div style={{ marginBottom: '16px' }}>◊ {housing.name} — Floor Plan</div>
-      <div style={{ color: '#3a7acc', fontSize: '12px' }}>
-        Blueprint coming soon! ({housing.slots} hobby spaces)
+      <div style={{ color: theme.text, fontWeight: 600, marginBottom: '12px' }}>
+        🏠 {housing.name}
+      </div>
+      <div style={{ color: theme.textSecondary, fontSize: '14px' }}>
+        Layout coming soon! ({housing.slots} hobby spaces)
       </div>
     </div>
   );
@@ -473,6 +550,7 @@ const AVAILABLE_BUSINESSES = [
 
 // Main Home view
 function Home() {
+  const { theme } = useTheme();
   const [housing, setHousing] = useState(getHousing());
   const [showBusinessPicker, setShowBusinessPicker] = useState(false);
   const [businesses, setBusinesses] = useState<string[]>([]);
@@ -492,30 +570,30 @@ function Home() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%)',
-        color: '#fff',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        background: theme.bg,
       }}>
         <GameHeader />
         
         {/* Back button */}
         <div style={{
-          padding: '12px 20px',
-          background: '#12121f',
-          borderBottom: '1px solid #2a2a4a',
+          padding: '16px 24px',
+          borderBottom: `1px solid ${theme.border}`,
         }}>
           <button
             onClick={() => setActiveBusiness(null)}
             style={{
-              background: 'transparent',
-              border: '1px solid #3a3a5a',
-              color: '#888',
-              padding: '8px 16px',
-              borderRadius: '6px',
+              background: theme.surface,
+              border: `1px solid ${theme.border}`,
+              color: theme.textSecondary,
+              padding: '10px 18px',
+              borderRadius: theme.radiusMd,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
+              fontSize: '14px',
+              fontWeight: 500,
+              boxShadow: theme.shadow,
             }}
           >
             ← Back to Apartment
@@ -523,7 +601,7 @@ function Home() {
         </div>
         
         {/* Business UI */}
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: '24px' }}>
           {activeBusiness === 'herbs' && <ContainerFarm />}
         </div>
       </div>
@@ -533,14 +611,12 @@ function Home() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%)',
-      color: '#fff',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      background: theme.bg,
     }}>
       <GameHeader />
       
       {/* Apartment layout */}
-      <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ padding: '24px', maxWidth: '720px', margin: '0 auto' }}>
         <ApartmentLayout
           housing={housing}
           businesses={businesses}
@@ -554,23 +630,26 @@ function Home() {
         <div style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.85)',
+          background: `${theme.text}99`,
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
         }} onClick={() => setShowBusinessPicker(false)}>
           <div style={{
-            background: '#1a1a2e',
-            borderRadius: '12px',
-            padding: '24px',
-            maxWidth: '500px',
+            background: theme.surface,
+            borderRadius: theme.radiusLg,
+            padding: '28px',
+            maxWidth: '440px',
             width: '90%',
-            border: '1px solid #2a2a4a',
+            boxShadow: theme.shadowLg,
           }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 8px', color: '#fff' }}>Start a Business</h2>
-            <p style={{ color: '#888', margin: '0 0 20px', fontSize: '14px' }}>
-              Choose a hobby to turn into a side hustle
+            <h2 style={{ margin: '0 0 6px', color: theme.text, fontSize: '20px', fontWeight: 600 }}>
+              Start a Side Hustle
+            </h2>
+            <p style={{ color: theme.textSecondary, margin: '0 0 24px', fontSize: '14px' }}>
+              Turn a hobby into income
             </p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -590,47 +669,73 @@ function Home() {
                       }
                     }}
                     style={{
-                      padding: '16px',
-                      background: isDisabled ? '#12121f' : '#1f1f3a',
-                      borderRadius: '8px',
-                      border: `1px solid ${isDisabled ? '#2a2a4a' : '#4ecdc4'}`,
+                      padding: '18px',
+                      background: isDisabled ? theme.bg : theme.surface,
+                      borderRadius: theme.radiusLg,
+                      border: `2px solid ${isDisabled ? theme.border : theme.accent}`,
                       cursor: isDisabled ? 'not-allowed' : 'pointer',
                       opacity: isDisabled ? 0.6 : 1,
-                      transition: 'all 0.2s',
+                      transition: `all ${theme.transitionFast}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isDisabled) {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = theme.shadow;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                        <div style={{ fontSize: '28px' }}>{biz.icon}</div>
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                        <div style={{ 
+                          fontSize: '32px',
+                          background: theme.accentLight,
+                          padding: '8px',
+                          borderRadius: theme.radiusMd,
+                        }}>{biz.icon}</div>
                         <div>
-                          <div style={{ color: '#fff', fontWeight: 600, marginBottom: '4px' }}>
+                          <div style={{ color: theme.text, fontWeight: 600, marginBottom: '4px', fontSize: '15px' }}>
                             {biz.name}
                           </div>
-                          <div style={{ color: '#888', fontSize: '13px', lineHeight: 1.4 }}>
+                          <div style={{ color: theme.textSecondary, fontSize: '13px', lineHeight: 1.5 }}>
                             {biz.description}
                           </div>
                         </div>
                       </div>
                       <div style={{ 
-                        background: canAfford && !biz.disabled ? '#4ecdc4' : '#3a3a5a',
-                        color: canAfford && !biz.disabled ? '#000' : '#888',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
+                        background: canAfford && !biz.disabled ? theme.accent : theme.bg,
+                        color: canAfford && !biz.disabled ? theme.textInverse : theme.textMuted,
+                        padding: '8px 14px',
+                        borderRadius: theme.radiusMd,
                         fontWeight: 600,
                         fontSize: '14px',
                         whiteSpace: 'nowrap',
+                        border: canAfford && !biz.disabled ? 'none' : `1px solid ${theme.border}`,
                       }}>
                         ${biz.setupCost}
                       </div>
                     </div>
                     {alreadyHas && (
-                      <div style={{ color: '#4ecdc4', fontSize: '12px', marginTop: '8px' }}>
+                      <div style={{ 
+                        color: theme.accent, 
+                        fontSize: '12px', 
+                        marginTop: '10px',
+                        fontWeight: 500,
+                      }}>
                         ✓ Already running
                       </div>
                     )}
                     {!canAfford && !alreadyHas && !biz.disabled && (
-                      <div style={{ color: '#e85d75', fontSize: '12px', marginTop: '8px' }}>
-                        Not enough money
+                      <div style={{ 
+                        color: theme.danger, 
+                        fontSize: '12px', 
+                        marginTop: '10px',
+                        fontWeight: 500,
+                      }}>
+                        Not enough savings
                       </div>
                     )}
                   </div>
@@ -643,15 +748,17 @@ function Home() {
               style={{
                 marginTop: '20px',
                 background: 'transparent',
-                color: '#888',
-                border: '1px solid #3a3a5a',
-                padding: '10px 20px',
-                borderRadius: '6px',
+                color: theme.textSecondary,
+                border: `1px solid ${theme.border}`,
+                padding: '12px 20px',
+                borderRadius: theme.radiusMd,
                 cursor: 'pointer',
                 width: '100%',
+                fontSize: '14px',
+                fontWeight: 500,
               }}
             >
-              Cancel
+              Maybe later
             </button>
           </div>
         </div>
@@ -662,6 +769,7 @@ function Home() {
 
 // Main App with engine lifecycle
 export default function App() {
+  const { theme } = useTheme();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -677,14 +785,16 @@ export default function App() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: '#0f0f1a',
+        background: theme.bg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#fff',
-        fontFamily: 'system-ui',
+        color: theme.text,
       }}>
-        Loading...
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '32px', marginBottom: '12px' }}>🌱</div>
+          <div style={{ color: theme.textSecondary }}>Loading...</div>
+        </div>
       </div>
     );
   }
