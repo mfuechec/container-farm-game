@@ -378,7 +378,6 @@ export const useGameStore = create<GameStore>()(
         const item = state.plantHobby.harvest.find(h => h.id === harvestId);
         if (!item) return false;
         
-        // Import harvestToFoodItem dynamically to avoid circular deps
         const plantType = getPlantType(item.typeId);
         if (!plantType) return false;
         
@@ -386,11 +385,17 @@ export const useGameStore = create<GameStore>()(
           id: `food_${Date.now()}_${Math.random().toString(36).slice(2)}`,
           name: plantType.name,
           emoji: plantType.emoji,
-          category: 'herb',
           quantity: item.quantity,
           freshness: item.freshness,
+          maxFreshDays: 7, // Herbs last about a week
           storedAt: Date.now(),
-          decayRate: 0.1,
+          groceryValue: plantType.sellPrice * 0.5, // Worth half sell price in grocery savings
+          sourceHobby: 'plants',
+          sourceType: item.typeId,
+          bonus: {
+            type: 'growth',
+            amount: 1.1, // 10% growth boost when stored
+          },
         };
         
         if (!get().storeInKitchen(food)) return false;
