@@ -5,15 +5,16 @@
  * Components read from store and dispatch actions.
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useTheme } from './theme';
-import { useGameStore, selectKitchenBonuses, selectGrowthMultiplier } from './store/gameStore';
+import { useGameStore } from './store/gameStore';
+import { useShallow } from 'zustand/react/shallow';
 
 // Components
 import { ApartmentView } from './apartment/ApartmentView';
 import { PlantHobby } from './hobbies/plants/PlantHobby';
 import { HobbySlot } from './apartment/types';
-import { calculateGrocerySavings } from './kitchen/types';
+import { calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier } from './kitchen/types';
 
 // Tick interval
 const TICK_INTERVAL = 1000;
@@ -21,12 +22,16 @@ const TICK_INTERVAL = 1000;
 export function Game() {
   const { theme, toggleTheme, isDark } = useTheme();
   
-  // Store state
-  const view = useGameStore(s => s.view);
-  const apartment = useGameStore(s => s.apartment);
-  const kitchen = useGameStore(s => s.kitchen);
-  const economy = useGameStore(s => s.economy);
-  const gameDay = useGameStore(s => s.gameDay);
+  // Store state - use shallow to prevent unnecessary re-renders
+  const { view, apartment, kitchen, economy, gameDay } = useGameStore(
+    useShallow(s => ({
+      view: s.view,
+      apartment: s.apartment,
+      kitchen: s.kitchen,
+      economy: s.economy,
+      gameDay: s.gameDay,
+    }))
+  );
   
   // Store actions (stable references from Zustand)
   const setView = useGameStore(s => s.setView);
@@ -34,15 +39,11 @@ export function Game() {
   const startHobby = useGameStore(s => s.startHobby);
   const skipTime = useGameStore(s => s.skipTime);
   
-  // Derived values
-  const kitchenBonuses = useGameStore(selectKitchenBonuses);
-  const growthMultiplier = useGameStore(selectGrowthMultiplier);
+  // Derived values - compute from state directly
+  const kitchenBonuses = useMemo(() => getActiveKitchenBonuses(kitchen.storage), [kitchen.storage]);
+  const growthMultiplier = useMemo(() => getBonusMultiplier(kitchenBonuses, 'growth'), [kitchenBonuses]);
   const grocerySavings = useMemo(() => calculateGrocerySavings(kitchen.storage), [kitchen.storage]);
   const weeklyExpenses = economy.weeklyRent + Math.max(0, economy.weeklyGroceryBase - grocerySavings);
-
-  // Keep growthMultiplier in a ref so interval always has current value
-  const growthMultiplierRef = useRef(growthMultiplier);
-  growthMultiplierRef.current = growthMultiplier;
 
   // Game tick - handle time passing (runs once on mount)
   useEffect(() => {
@@ -50,7 +51,10 @@ export function Game() {
       // Access store directly to avoid stale closures
       const store = useGameStore.getState();
       store.tick();
-      store.growPlants(growthMultiplierRef.current);
+      // Get current growth multiplier from kitchen state
+      const bonuses = getActiveKitchenBonuses(store.kitchen.storage);
+      const mult = getBonusMultiplier(bonuses, 'growth');
+      store.growPlants(mult);
     }, TICK_INTERVAL);
     
     return () => clearInterval(interval);
