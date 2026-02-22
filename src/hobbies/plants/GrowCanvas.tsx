@@ -191,11 +191,15 @@ function updateLight(
   lightG.clear();
   glowG.clear();
 
-  // Glow effect
+  // Glow effect - layered for depth
   if (intensity > 0.1) {
-    const glowHeight = 120;
-    glowG.ellipse(width / 2, lightY + 30 + glowHeight / 2, lightWidth * 0.4, glowHeight / 2);
-    glowG.fill({ color: COLORS.lightGlow, alpha: intensity * 0.15 });
+    const glowHeight = 140;
+    // Outer glow (softer)
+    glowG.ellipse(width / 2, lightY + 40 + glowHeight / 2, lightWidth * 0.5, glowHeight / 2);
+    glowG.fill({ color: 0xFFF3E0, alpha: intensity * 0.12 });
+    // Inner glow (brighter)
+    glowG.ellipse(width / 2, lightY + 35 + glowHeight / 2, lightWidth * 0.35, glowHeight * 0.4);
+    glowG.fill({ color: COLORS.lightGlow, alpha: intensity * 0.2 });
   }
 
   // Mounting bar
@@ -297,17 +301,37 @@ function drawPot(
   container.addChild(g);
 
   if (!potInstance) {
-    // Empty slot - dashed outline
-    g.roundRect(5, 10, width - 10, height - 15, 4);
-    g.stroke({ color: 0x9E9E9E, width: 2 });
+    // Empty slot - subtle fill with border
+    g.roundRect(5, 5, width - 10, height - 10, 6);
+    g.fill({ color: hasLight ? 0xFFF8E1 : 0xF5F5F5, alpha: 0.8 });
+    g.stroke({ color: hasLight ? 0xFFB74D : 0xBDBDBD, width: 2 });
+    
+    // Plus icon to indicate "add here"
+    const centerX = width / 2;
+    const centerY = height / 2 - 4;
+    const plusSize = 8;
+    g.rect(centerX - 1, centerY - plusSize, 2, plusSize * 2);
+    g.fill(hasLight ? 0xFFB74D : 0x9E9E9E);
+    g.rect(centerX - plusSize, centerY - 1, plusSize * 2, 2);
+    g.fill(hasLight ? 0xFFB74D : 0x9E9E9E);
     
     // Price label
-    const style = new TextStyle({ fontSize: 11, fill: 0x9E9E9E });
+    const style = new TextStyle({ 
+      fontSize: 11, 
+      fill: hasLight ? 0xE65100 : 0x757575,
+      fontWeight: 'bold'
+    });
     const text = new Text({ text: '$5', style });
     text.anchor.set(0.5);
     text.x = width / 2;
-    text.y = height / 2;
+    text.y = height - 8;
     container.addChild(text);
+    
+    // Light indicator for empty slot
+    if (hasLight) {
+      g.circle(width - 6, 10, 4);
+      g.fill({ color: COLORS.lightGlow, alpha: 0.9 });
+    }
     return;
   }
 
