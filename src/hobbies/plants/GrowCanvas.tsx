@@ -335,6 +335,10 @@ function drawPot(
     return;
   }
 
+  // Pot shadow for depth
+  g.ellipse(width / 2, height - 2, width * 0.35, 4);
+  g.fill({ color: 0x000000, alpha: 0.1 });
+
   // Draw plant first (behind pot rim)
   if (plant) {
     drawPlant(container, width, height, plant);
@@ -371,24 +375,26 @@ function drawPot(
     g.fill({ color: COLORS.lightGlow, alpha: 0.9 });
   }
 
-  // Status text
-  const style = new TextStyle({ fontSize: 10, fill: 0x666666, fontFamily: 'monospace' });
+  // Status text - positioned inside the pot area
+  const style = new TextStyle({ fontSize: 9, fill: 0x666666, fontFamily: 'sans-serif' });
   let statusText = '';
   
   if (!plant) {
     statusText = 'empty';
+    style.fill = 0x8D6E63;
   } else if (plant.stage === 'harvestable') {
     style.fill = 0x4CAF50;
     style.fontWeight = 'bold';
-    statusText = 'harvest!';
+    statusText = '✓ harvest';
   } else {
     statusText = `${Math.round(plant.growthProgress * 100)}%`;
+    style.fill = 0x2E7D32;
   }
 
   const text = new Text({ text: statusText, style });
-  text.anchor.set(0.5, 0);
+  text.anchor.set(0.5, 1);
   text.x = width / 2;
-  text.y = height + 2;
+  text.y = height - 5; // Inside pot area, not below
   container.addChild(text);
 
   // Harvest pulse animation for ready plants
