@@ -5,9 +5,9 @@
  * Components read from store and dispatch actions.
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useTheme } from './theme';
-import { useGameStore, selectKitchenBonuses, selectGrowthMultiplier, selectYieldMultiplier } from './store/gameStore';
+import { useGameStore, selectKitchenBonuses, selectGrowthMultiplier } from './store/gameStore';
 
 // Components
 import { ApartmentView } from './apartment/ApartmentView';
@@ -28,13 +28,11 @@ export function Game() {
   const economy = useGameStore(s => s.economy);
   const gameDay = useGameStore(s => s.gameDay);
   
-  // Store actions
+  // Store actions (stable references from Zustand)
   const setView = useGameStore(s => s.setView);
   const setSelectedSlot = useGameStore(s => s.setSelectedSlot);
   const startHobby = useGameStore(s => s.startHobby);
   const skipTime = useGameStore(s => s.skipTime);
-  const tick = useGameStore(s => s.tick);
-  const growPlants = useGameStore(s => s.growPlants);
   
   // Derived values
   const kitchenBonuses = useGameStore(selectKitchenBonuses);
@@ -42,15 +40,21 @@ export function Game() {
   const grocerySavings = useMemo(() => calculateGrocerySavings(kitchen.storage), [kitchen.storage]);
   const weeklyExpenses = economy.weeklyRent + Math.max(0, economy.weeklyGroceryBase - grocerySavings);
 
-  // Game tick - handle time passing
+  // Keep growthMultiplier in a ref so interval always has current value
+  const growthMultiplierRef = useRef(growthMultiplier);
+  growthMultiplierRef.current = growthMultiplier;
+
+  // Game tick - handle time passing (runs once on mount)
   useEffect(() => {
     const interval = setInterval(() => {
-      tick();
-      growPlants(growthMultiplier);
+      // Access store directly to avoid stale closures
+      const store = useGameStore.getState();
+      store.tick();
+      store.growPlants(growthMultiplierRef.current);
     }, TICK_INTERVAL);
     
     return () => clearInterval(interval);
-  }, [tick, growPlants, growthMultiplier]);
+  }, []); // Empty deps - only run once
 
   // Navigation handlers
   const handleSelectHobby = (slot: HobbySlot) => {
