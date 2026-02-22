@@ -17,11 +17,13 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "husky": "^9.1.7",
-    "typescript": "^5.7.0",
+    "playwright": "^1.58.2",
+    "typescript": "^5.9.3",
     "vite": "^6.0.0"
   },
   "description": "A container herb farming simulation game built as a single React component. Breed plants, optimize genetics, manage your shelf, and sell at the weekly farmers market.",

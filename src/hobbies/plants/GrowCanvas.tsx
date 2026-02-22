@@ -74,6 +74,9 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
       // Create scene structure
       const scene = createScene(app, width, height, table.potSlots, light.coverage, onSlotClick);
       sceneRef.current = scene;
+
+      // Initial render of pots (useEffect won't trigger since state hasn't changed)
+      updatePots(scene.potsContainer, scene.pots, table.potSlots, pots, plants, light.coverage, width, height, onSlotClick);
     };
 
     init();
