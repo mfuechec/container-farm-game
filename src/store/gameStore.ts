@@ -84,11 +84,13 @@ interface GameActions {
   // Plant Hobby
   buySeeds: (typeId: string, qty?: number) => void;
   buyPot: (slot: number) => void;
+  buyPotType: (slot: number, potTypeId: string) => void;
+  upgradeTable: (tableId: string) => void;
+  upgradeLight: (lightId: string) => void;
   plantSeed: (typeId: string, potId: string) => void;
   harvestPlant: (plantId: string, yieldMultiplier: number) => void;
   sellHarvest: (harvestId: string) => void;
   storeHarvest: (harvestId: string) => boolean;
-  growPlants: (growthMultiplier: number) => void;
 }
 
 type GameStore = GameState & GameActions;
@@ -271,6 +273,72 @@ export const useGameStore = create<GameStore>()(
         });
       },
       
+      buyPotType: (slot, potTypeId) => {
+        const state = get();
+        const potType = getPotType(potTypeId);
+        if (!potType) return;
+        if (!get().spendMoney(potType.cost)) return;
+        if (state.plantHobby.pots.some(p => p.slot === slot)) return;
+        
+        const newPot: PotInstance = {
+          id: generatePotId(),
+          typeId: potTypeId,
+          slot,
+          plant: null,
+        };
+        
+        set({
+          plantHobby: {
+            ...state.plantHobby,
+            pots: [...state.plantHobby.pots, newPot],
+          }
+        });
+      },
+      
+      upgradeTable: (tableId) => {
+        const state = get();
+        const tableType = TABLE_TYPES.find(t => t.id === tableId);
+        if (!tableType) return;
+        if (state.plantHobby.table.id === tableId) return; // Already have it
+        if (!get().spendMoney(tableType.cost)) return;
+        
+        // When upgrading table, keep existing pots that fit
+        const newPots = state.plantHobby.pots.filter(p => p.slot < tableType.potSlots);
+        
+        set({
+          plantHobby: {
+            ...state.plantHobby,
+            table: tableType,
+            pots: newPots,
+          }
+        });
+      },
+      
+      upgradeLight: (lightId) => {
+        const state = get();
+        const lightType = LIGHT_TYPES.find(l => l.id === lightId);
+        if (!lightType) return;
+        if (state.plantHobby.light.id === lightId) return; // Already have it
+        if (!get().spendMoney(lightType.cost)) return;
+        
+        // Update light coverage for existing plants
+        const newPlants: Record<string, PlantInstance> = {};
+        for (const [id, plant] of Object.entries(state.plantHobby.plants)) {
+          newPlants[id] = {
+            ...plant,
+            hasLight: slotHasLight(plant.potSlot, lightType.coverage),
+          };
+        }
+        
+        set({
+          plantHobby: {
+            ...state.plantHobby,
+            light: lightType,
+            plants: newPlants,
+          }
+        });
+      },
+      
       plantSeed: (typeId, potId) => {
         const state = get();
         const { plantHobby } = state;
@@ -409,62 +477,6 @@ export const useGameStore = create<GameStore>()(
         return true;
       },
       
-      growPlants: (growthMultiplier) => {
-        const state = get();
-        const { plantHobby, lastTick } = state;
-        const now = Date.now();
-        const daysPassed = (now - lastTick) / MS_PER_GAME_DAY;
-        
-        if (daysPassed < 0.001) return;
-        
-        let changed = false;
-        const newPlants: Record<string, PlantInstance> = {};
-        
-        for (const [id, plant] of Object.entries(plantHobby.plants)) {
-          if (plant.stage === 'harvestable') {
-            newPlants[id] = plant;
-            continue;
-          }
-          
-          const plantType = getPlantType(plant.typeId);
-          if (!plantType) {
-            newPlants[id] = plant;
-            continue;
-          }
-          
-          let growthRate = 1 / plantType.daysToMature;
-          if (plant.hasLight) growthRate *= plantHobby.light.growthBoost;
-          else growthRate *= 0.5;
-          growthRate *= growthMultiplier;
-          
-          const pot = plantHobby.pots.find(p => p.plant === id);
-          if (pot) {
-            const potType = getPotType(pot.typeId);
-            if (potType) growthRate *= potType.growthModifier;
-          }
-          
-          const newProgress = Math.min(1, plant.growthProgress + growthRate * daysPassed);
-          if (newProgress !== plant.growthProgress) {
-            changed = true;
-            newPlants[id] = {
-              ...plant,
-              growthProgress: newProgress,
-              stage: getGrowthStage(newProgress),
-            };
-          } else {
-            newPlants[id] = plant;
-          }
-        }
-        
-        if (changed) {
-          set({
-            plantHobby: {
-              ...plantHobby,
-              plants: newPlants,
-            }
-          });
-        }
-      },
     }),
     {
       name: 'side-hustle-game',

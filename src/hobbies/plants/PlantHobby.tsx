@@ -13,7 +13,7 @@ import {
 } from './types';
 import {
   PotInstance,
-  POT_TYPES,
+  POT_TYPES, TABLE_TYPES, LIGHT_TYPES,
   getPotType, slotHasLight,
 } from './equipment';
 
@@ -33,6 +33,8 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
   // Store actions
   const buySeeds = useGameStore(s => s.buySeeds);
   const buyPot = useGameStore(s => s.buyPot);
+  const upgradeTable = useGameStore(s => s.upgradeTable);
+  const upgradeLight = useGameStore(s => s.upgradeLight);
   const plantSeed = useGameStore(s => s.plantSeed);
   const harvestPlant = useGameStore(s => s.harvestPlant);
   const sellHarvest = useGameStore(s => s.sellHarvest);
@@ -201,48 +203,165 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
         )}
 
         {tab === 'shop' && (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {PLANT_TYPES.map(plant => {
-              const owned = seeds[plant.id] || 0;
-              const canAfford = money >= plant.seedCost;
-              
-              return (
-                <div key={plant.id} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: 12,
-                  background: theme.bgAlt,
-                  borderRadius: theme.radiusMd,
-                }}>
-                  <span style={{ fontSize: 24 }}>{plant.emoji}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: theme.text }}>
-                      {plant.name}
-                      {owned > 0 && <span style={{ color: theme.accent, marginLeft: 8 }}>×{owned}</span>}
-                    </div>
-                    <div style={{ fontSize: 11, color: theme.textSecondary }}>
-                      {plant.daysToMature}d · ${plant.sellPrice}/ea
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => buySeeds(plant.id)}
-                    disabled={!canAfford}
-                    style={{
-                      padding: '8px 14px',
-                      background: canAfford ? theme.accent : theme.bgAlt,
-                      border: `1px solid ${canAfford ? theme.accent : theme.border}`,
+          <div style={{ display: 'grid', gap: 16 }}>
+            {/* Seeds Section */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: theme.textSecondary, marginBottom: 8, textTransform: 'uppercase' }}>
+                Seeds
+              </div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {PLANT_TYPES.map(plant => {
+                  const owned = seeds[plant.id] || 0;
+                  const canAfford = money >= plant.seedCost;
+                  
+                  return (
+                    <div key={plant.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: 10,
+                      background: theme.bgAlt,
                       borderRadius: theme.radiusMd,
-                      color: canAfford ? theme.textInverse : theme.textMuted,
-                      cursor: canAfford ? 'pointer' : 'not-allowed',
-                      fontWeight: 600,
-                    }}
-                  >
-                    ${plant.seedCost}
-                  </button>
-                </div>
-              );
-            })}
+                    }}>
+                      <span style={{ fontSize: 20 }}>{plant.emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: theme.text, fontSize: 13 }}>
+                          {plant.name}
+                          {owned > 0 && <span style={{ color: theme.accent, marginLeft: 6 }}>×{owned}</span>}
+                        </div>
+                        <div style={{ fontSize: 10, color: theme.textMuted }}>
+                          {plant.daysToMature}d · ${plant.sellPrice}/ea
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => buySeeds(plant.id)}
+                        disabled={!canAfford}
+                        style={{
+                          padding: '6px 12px',
+                          background: canAfford ? theme.accent : theme.bgAlt,
+                          border: `1px solid ${canAfford ? theme.accent : theme.border}`,
+                          borderRadius: theme.radiusSm,
+                          color: canAfford ? theme.textInverse : theme.textMuted,
+                          cursor: canAfford ? 'pointer' : 'not-allowed',
+                          fontWeight: 600,
+                          fontSize: 12,
+                        }}
+                      >
+                        ${plant.seedCost}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Tables Section */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: theme.textSecondary, marginBottom: 8, textTransform: 'uppercase' }}>
+                Tables
+              </div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {TABLE_TYPES.map(t => {
+                  const owned = table.id === t.id;
+                  const canAfford = money >= t.cost;
+                  
+                  return (
+                    <div key={t.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: 10,
+                      background: owned ? `${theme.accent}15` : theme.bgAlt,
+                      border: owned ? `1px solid ${theme.accent}` : `1px solid transparent`,
+                      borderRadius: theme.radiusMd,
+                    }}>
+                      <span style={{ fontSize: 20 }}>{t.emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: theme.text, fontSize: 13 }}>
+                          {t.name}
+                          {owned && <span style={{ color: theme.accent, marginLeft: 6, fontSize: 10 }}>✓ owned</span>}
+                        </div>
+                        <div style={{ fontSize: 10, color: theme.textMuted }}>
+                          {t.potSlots} slots · {t.description}
+                        </div>
+                      </div>
+                      {!owned && (
+                        <button
+                          onClick={() => upgradeTable(t.id)}
+                          disabled={!canAfford || t.cost === 0}
+                          style={{
+                            padding: '6px 12px',
+                            background: canAfford ? theme.accent : theme.bgAlt,
+                            border: `1px solid ${canAfford ? theme.accent : theme.border}`,
+                            borderRadius: theme.radiusSm,
+                            color: canAfford ? theme.textInverse : theme.textMuted,
+                            cursor: canAfford ? 'pointer' : 'not-allowed',
+                            fontWeight: 600,
+                            fontSize: 12,
+                          }}
+                        >
+                          {t.cost === 0 ? 'Free' : `$${t.cost}`}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Lights Section */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: theme.textSecondary, marginBottom: 8, textTransform: 'uppercase' }}>
+                Lights
+              </div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {LIGHT_TYPES.map(l => {
+                  const owned = light.id === l.id;
+                  const canAfford = money >= l.cost;
+                  
+                  return (
+                    <div key={l.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: 10,
+                      background: owned ? `${theme.accent}15` : theme.bgAlt,
+                      border: owned ? `1px solid ${theme.accent}` : `1px solid transparent`,
+                      borderRadius: theme.radiusMd,
+                    }}>
+                      <span style={{ fontSize: 20 }}>{l.emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: theme.text, fontSize: 13 }}>
+                          {l.name}
+                          {owned && <span style={{ color: theme.accent, marginLeft: 6, fontSize: 10 }}>✓ owned</span>}
+                        </div>
+                        <div style={{ fontSize: 10, color: theme.textMuted }}>
+                          {l.coverage} coverage · {Math.round((l.growthBoost - 1) * 100)}% boost · {l.description}
+                        </div>
+                      </div>
+                      {!owned && (
+                        <button
+                          onClick={() => upgradeLight(l.id)}
+                          disabled={!canAfford || l.cost === 0}
+                          style={{
+                            padding: '6px 12px',
+                            background: canAfford ? theme.accent : theme.bgAlt,
+                            border: `1px solid ${canAfford ? theme.accent : theme.border}`,
+                            borderRadius: theme.radiusSm,
+                            color: canAfford ? theme.textInverse : theme.textMuted,
+                            cursor: canAfford ? 'pointer' : 'not-allowed',
+                            fontWeight: 600,
+                            fontSize: 12,
+                          }}
+                        >
+                          {l.cost === 0 ? 'Free' : `$${l.cost}`}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
