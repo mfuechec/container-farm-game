@@ -484,14 +484,15 @@ export const useGameStore = create<GameStore>()(
 
 // Selectors for derived state
 export const selectKitchenBonuses = (state: GameState) => {
-  // Simplified - just return growth/yield bonuses based on stored items
+  // Get bonuses from stored items that have them
   const bonuses: Array<{ type: string; amount: number; source: string }> = [];
   
   for (const item of state.kitchen.storage) {
-    if (item.category === 'herb' && item.freshness > 0.5) {
+    // Only active if fresh enough
+    if (item.freshness > 0.3 && item.bonus) {
       bonuses.push({
-        type: 'growth',
-        amount: 1.1,
+        type: item.bonus.type,
+        amount: item.bonus.amount,
         source: item.name,
       });
     }
