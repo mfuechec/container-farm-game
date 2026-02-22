@@ -1,137 +1,68 @@
 /**
  * Main Game Component
  * 
- * Ties together all systems:
- * - Apartment (housing, rooms)
- * - Hobbies (plants, etc.)
- * - Kitchen (shared storage)
- * - Economy (money)
+ * Uses Zustand store for all state management.
+ * Components read from store and dispatch actions.
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useTheme } from './theme';
+import { useGameStore, selectKitchenBonuses, selectGrowthMultiplier, selectYieldMultiplier } from './store/gameStore';
 
-// Systems
-import { ApartmentState, HobbySlot, INITIAL_APARTMENT } from './apartment/types';
+// Components
 import { ApartmentView } from './apartment/ApartmentView';
-import { KitchenState, INITIAL_KITCHEN, FoodItem, calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier, decayKitchenItems } from './kitchen/types';
-import { EconomyState, INITIAL_ECONOMY } from './economy/types';
-
-// Hobbies
 import { PlantHobby } from './hobbies/plants/PlantHobby';
-import { HarvestedPlant, harvestToFoodItem } from './hobbies/plants/types';
+import { HobbySlot } from './apartment/types';
+import { calculateGrocerySavings } from './kitchen/types';
 
-// Views
-type GameView = 'apartment' | 'kitchen' | 'hobby-plants' | 'hobby-select';
-
-// Time constants
-const MS_PER_GAME_DAY = 60 * 60 * 1000; // 1 hour = 1 day
+// Tick interval
 const TICK_INTERVAL = 1000;
 
 export function Game() {
   const { theme, toggleTheme, isDark } = useTheme();
   
-  // Core state
-  const [view, setView] = useState<GameView>('apartment');
-  const [selectedSlot, setSelectedSlot] = useState<number>(0);
+  // Store state
+  const view = useGameStore(s => s.view);
+  const apartment = useGameStore(s => s.apartment);
+  const kitchen = useGameStore(s => s.kitchen);
+  const economy = useGameStore(s => s.economy);
+  const gameDay = useGameStore(s => s.gameDay);
   
-  // Systems
-  const [apartment, setApartment] = useState<ApartmentState>(INITIAL_APARTMENT);
-  const [kitchen, setKitchen] = useState<KitchenState>(INITIAL_KITCHEN);
-  const [economy, setEconomy] = useState<EconomyState>(INITIAL_ECONOMY);
+  // Store actions
+  const setView = useGameStore(s => s.setView);
+  const setSelectedSlot = useGameStore(s => s.setSelectedSlot);
+  const startHobby = useGameStore(s => s.startHobby);
+  const skipTime = useGameStore(s => s.skipTime);
+  const tick = useGameStore(s => s.tick);
+  const growPlants = useGameStore(s => s.growPlants);
   
-  // Time
-  const [gameDay, setGameDay] = useState(1);
-  const [lastTick, setLastTick] = useState(Date.now());
-
   // Derived values
-  const kitchenBonuses = useMemo(() => getActiveKitchenBonuses(kitchen.storage), [kitchen.storage]);
+  const kitchenBonuses = useGameStore(selectKitchenBonuses);
+  const growthMultiplier = useGameStore(selectGrowthMultiplier);
   const grocerySavings = useMemo(() => calculateGrocerySavings(kitchen.storage), [kitchen.storage]);
-  const growthMultiplier = useMemo(() => getBonusMultiplier(kitchenBonuses, 'growth'), [kitchenBonuses]);
-  const yieldMultiplier = useMemo(() => getBonusMultiplier(kitchenBonuses, 'yield'), [kitchenBonuses]);
   const weeklyExpenses = economy.weeklyRent + Math.max(0, economy.weeklyGroceryBase - grocerySavings);
 
   // Game tick - handle time passing
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = Date.now();
-      const elapsed = now - lastTick;
-      const daysPassed = elapsed / MS_PER_GAME_DAY;
-      
-      if (daysPassed < 0.01) return;
-      
-      // Decay kitchen items
-      setKitchen(prev => ({
-        ...prev,
-        storage: decayKitchenItems(prev.storage, daysPassed),
-      }));
-      
-      // Weekly expenses check
-      const prevWeek = Math.floor((gameDay - 1) / 7);
-      const newDay = gameDay + daysPassed;
-      const newWeek = Math.floor((newDay - 1) / 7);
-      
-      if (newWeek > prevWeek) {
-        setEconomy(prev => ({
-          ...prev,
-          money: prev.money - weeklyExpenses,
-        }));
-      }
-      
-      setGameDay(newDay);
-      setLastTick(now);
+      tick();
+      growPlants(growthMultiplier);
     }, TICK_INTERVAL);
     
     return () => clearInterval(interval);
-  }, [lastTick, gameDay, weeklyExpenses]);
+  }, [tick, growPlants, growthMultiplier]);
 
-  // Actions
-  const addMoney = useCallback((amount: number) => {
-    setEconomy(prev => ({ ...prev, money: prev.money + amount }));
-  }, []);
-
-  const spendMoney = useCallback((amount: number): boolean => {
-    if (economy.money < amount) return false;
-    setEconomy(prev => ({ ...prev, money: prev.money - amount }));
-    return true;
-  }, [economy.money]);
-
-  const storeInKitchen = useCallback((item: FoodItem) => {
-    if (kitchen.storage.length >= kitchen.capacity) return false;
-    setKitchen(prev => ({
-      ...prev,
-      storage: [...prev.storage, item],
-    }));
-    return true;
-  }, [kitchen]);
-
-  const startHobby = useCallback((slot: number, hobby: 'plants' | 'mushrooms') => {
-    setApartment(prev => ({
-      ...prev,
-      hobbySlots: prev.hobbySlots.map((s, i) => 
-        i === slot ? { ...s, hobby } : s
-      ),
-    }));
-    setView(`hobby-${hobby}` as GameView);
-  }, []);
-
-  const skipTime = useCallback((days: number) => {
-    setLastTick(prev => prev - (days * MS_PER_GAME_DAY));
-  }, []);
-
-  // Navigation
-  const handleSelectHobby = useCallback((slot: HobbySlot) => {
+  // Navigation handlers
+  const handleSelectHobby = (slot: HobbySlot) => {
     setSelectedSlot(slot.index);
     if (slot.hobby === 'plants') {
       setView('hobby-plants');
     } else if (slot.hobby === null) {
       setView('hobby-select');
     }
-  }, []);
+  };
 
-  const handleBack = useCallback(() => {
-    setView('apartment');
-  }, []);
+  const handleBack = () => setView('apartment');
 
   // Render based on current view
   let content: React.ReactNode;
@@ -153,7 +84,7 @@ export function Game() {
     case 'hobby-select':
       content = (
         <HobbySelector
-          onSelect={(hobby) => startHobby(selectedSlot, hobby)}
+          onSelect={(hobby) => startHobby(0, hobby)}
           onBack={handleBack}
           theme={theme}
         />
@@ -163,19 +94,6 @@ export function Game() {
     case 'hobby-plants':
       content = (
         <PlantHobby
-          money={economy.money}
-          onSpendMoney={spendMoney}
-          onAddMoney={addMoney}
-          onStoreInKitchen={(harvest: HarvestedPlant) => {
-            const food = harvestToFoodItem(harvest);
-            if (food) return storeInKitchen(food);
-            return false;
-          }}
-          kitchenFull={kitchen.storage.length >= kitchen.capacity}
-          growthMultiplier={growthMultiplier}
-          yieldMultiplier={yieldMultiplier}
-          gameDay={gameDay}
-          lastTick={lastTick}
           onBack={handleBack}
         />
       );
@@ -318,7 +236,7 @@ function KitchenView({
   onBack,
   theme,
 }: {
-  kitchen: KitchenState;
+  kitchen: any;
   grocerySavings: number;
   weeklyExpenses: number;
   kitchenBonuses: any[];
@@ -393,7 +311,7 @@ function KitchenView({
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 8 }}>
-          {kitchen.storage.map(item => (
+          {kitchen.storage.map((item: any) => (
             <div key={item.id} style={{
               display: 'flex',
               alignItems: 'center',

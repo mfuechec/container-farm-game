@@ -1,301 +1,50 @@
 /**
  * Plant Hobby - The grow station view
  * 
- * Manages plant growing, harvesting. Outputs to kitchen/economy.
+ * Uses Zustand store for state. Only local UI state (tab, menus) lives here.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTheme } from '../../theme';
+import { useGameStore, selectYieldMultiplier } from '../../store/gameStore';
 import {
-  PlantType, PlantInstance, HarvestedPlant, PLANT_TYPES,
-  getPlantType, getGrowthStage, generatePlantId, generateHarvestId,
+  PlantInstance, PLANT_TYPES,
+  getPlantType,
 } from './types';
 import {
-  TableType, LightType, PotType, PotInstance,
-  TABLE_TYPES, LIGHT_TYPES, POT_TYPES,
-  getTableType, getLightType, getPotType, slotHasLight, generatePotId,
+  PotInstance,
+  POT_TYPES,
+  getPotType, slotHasLight,
 } from './equipment';
 
-// Time
-const MS_PER_GAME_DAY = 60 * 60 * 1000;
-const TICK_INTERVAL = 1000;
-
 interface PlantHobbyProps {
-  money: number;
-  onSpendMoney: (amount: number) => boolean;
-  onAddMoney: (amount: number) => void;
-  onStoreInKitchen: (harvest: HarvestedPlant) => boolean;
-  kitchenFull: boolean;
-  growthMultiplier: number;
-  yieldMultiplier: number;
-  gameDay: number;
-  lastTick: number;
   onBack: () => void;
 }
 
-interface PlantState {
-  table: TableType;
-  light: LightType;
-  pots: PotInstance[];
-  plants: Map<string, PlantInstance>;
-  seeds: Map<string, number>;
-  harvest: HarvestedPlant[];
-}
-
-const INITIAL_STATE: PlantState = {
-  table: TABLE_TYPES[0],
-  light: LIGHT_TYPES[0],
-  pots: [],
-  plants: new Map(),
-  seeds: new Map([['basil', 3]]),
-  harvest: [],
-};
-
-export function PlantHobby({
-  money,
-  onSpendMoney,
-  onAddMoney,
-  onStoreInKitchen,
-  kitchenFull,
-  growthMultiplier,
-  yieldMultiplier,
-  gameDay,
-  lastTick,
-  onBack,
-}: PlantHobbyProps) {
+export function PlantHobby({ onBack }: PlantHobbyProps) {
   const { theme } = useTheme();
-  const [state, setState] = useState<PlantState>(INITIAL_STATE);
+  
+  // Store state
+  const money = useGameStore(s => s.economy.money);
+  const plantHobby = useGameStore(s => s.plantHobby);
+  const kitchen = useGameStore(s => s.kitchen);
+  const yieldMultiplier = useGameStore(selectYieldMultiplier);
+  
+  // Store actions
+  const buySeeds = useGameStore(s => s.buySeeds);
+  const buyPot = useGameStore(s => s.buyPot);
+  const plantSeed = useGameStore(s => s.plantSeed);
+  const harvestPlant = useGameStore(s => s.harvestPlant);
+  const sellHarvest = useGameStore(s => s.sellHarvest);
+  const storeHarvest = useGameStore(s => s.storeHarvest);
+  
+  // Local UI state only
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [showPlantMenu, setShowPlantMenu] = useState(false);
   const [tab, setTab] = useState<'grow' | 'harvest' | 'shop'>('grow');
-  const [prevTick, setPrevTick] = useState(lastTick);
 
-  const { table, light, pots, plants, seeds, harvest } = state;
-
-  // Growth tick
-  useEffect(() => {
-    const elapsed = lastTick - prevTick;
-    if (elapsed < 0) {
-      // Time skipped forward
-      const daysPassed = -elapsed / MS_PER_GAME_DAY;
-      
-      setState(prev => {
-        const newPlants = new Map(prev.plants);
-        
-        for (const [id, plant] of newPlants) {
-          const plantType = getPlantType(plant.typeId);
-          if (!plantType) continue;
-          
-          let growthRate = 1 / plantType.daysToMature;
-          
-          if (plant.hasLight) {
-            growthRate *= prev.light.growthBoost;
-          } else {
-            growthRate *= 0.5;
-          }
-          
-          growthRate *= growthMultiplier;
-          
-          const pot = prev.pots.find(p => p.plant === id);
-          if (pot) {
-            const potType = getPotType(pot.typeId);
-            if (potType) growthRate *= potType.growthModifier;
-          }
-          
-          const newProgress = Math.min(1, plant.growthProgress + growthRate * daysPassed);
-          newPlants.set(id, {
-            ...plant,
-            growthProgress: newProgress,
-            stage: getGrowthStage(newProgress),
-          });
-        }
-        
-        return { ...prev, plants: newPlants };
-      });
-    }
-    setPrevTick(lastTick);
-  }, [lastTick, growthMultiplier]);
-
-  // Real-time growth
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const daysPassed = (now - prevTick) / MS_PER_GAME_DAY;
-      
-      if (daysPassed < 0.001) return;
-      
-      setState(prev => {
-        const newPlants = new Map(prev.plants);
-        let changed = false;
-        
-        for (const [id, plant] of newPlants) {
-          if (plant.stage === 'harvestable') continue;
-          
-          const plantType = getPlantType(plant.typeId);
-          if (!plantType) continue;
-          
-          let growthRate = 1 / plantType.daysToMature;
-          if (plant.hasLight) growthRate *= prev.light.growthBoost;
-          else growthRate *= 0.5;
-          growthRate *= growthMultiplier;
-          
-          const pot = prev.pots.find(p => p.plant === id);
-          if (pot) {
-            const potType = getPotType(pot.typeId);
-            if (potType) growthRate *= potType.growthModifier;
-          }
-          
-          const newProgress = Math.min(1, plant.growthProgress + growthRate * daysPassed);
-          if (newProgress !== plant.growthProgress) {
-            changed = true;
-            newPlants.set(id, {
-              ...plant,
-              growthProgress: newProgress,
-              stage: getGrowthStage(newProgress),
-            });
-          }
-        }
-        
-        if (!changed) return prev;
-        return { ...prev, plants: newPlants };
-      });
-      
-      setPrevTick(now);
-    }, TICK_INTERVAL);
-    
-    return () => clearInterval(interval);
-  }, [growthMultiplier]);
-
-  // Actions
-  const buySeeds = useCallback((typeId: string, qty: number = 1) => {
-    const type = getPlantType(typeId);
-    if (!type) return;
-    if (!onSpendMoney(type.seedCost * qty)) return;
-    
-    setState(prev => {
-      const newSeeds = new Map(prev.seeds);
-      newSeeds.set(typeId, (newSeeds.get(typeId) || 0) + qty);
-      return { ...prev, seeds: newSeeds };
-    });
-  }, [onSpendMoney]);
-
-  const buyPot = useCallback((slot: number) => {
-    const potType = POT_TYPES[0];
-    if (!onSpendMoney(potType.cost)) return;
-    
-    setState(prev => {
-      if (prev.pots.some(p => p.slot === slot)) return prev;
-      const newPot: PotInstance = {
-        id: generatePotId(),
-        typeId: potType.id,
-        slot,
-        plant: null,
-      };
-      return { ...prev, pots: [...prev.pots, newPot] };
-    });
-  }, [onSpendMoney]);
-
-  const plantSeed = useCallback((typeId: string, potId: string) => {
-    setState(prev => {
-      const seedCount = prev.seeds.get(typeId) || 0;
-      if (seedCount <= 0) return prev;
-      
-      const pot = prev.pots.find(p => p.id === potId);
-      if (!pot || pot.plant) return prev;
-      
-      const plantId = generatePlantId();
-      const hasLight = slotHasLight(pot.slot, prev.light.coverage);
-      
-      const newPlant: PlantInstance = {
-        id: plantId,
-        typeId,
-        plantedAt: Date.now(),
-        growthProgress: 0,
-        stage: 'seed',
-        hasLight,
-        potSlot: pot.slot,
-      };
-      
-      const newSeeds = new Map(prev.seeds);
-      newSeeds.set(typeId, seedCount - 1);
-      
-      const newPots = prev.pots.map(p => p.id === potId ? { ...p, plant: plantId } : p);
-      const newPlants = new Map(prev.plants);
-      newPlants.set(plantId, newPlant);
-      
-      return { ...prev, seeds: newSeeds, pots: newPots, plants: newPlants };
-    });
-    
-    setShowPlantMenu(false);
-    setSelectedSlot(null);
-  }, []);
-
-  const harvestPlant = useCallback((plantId: string) => {
-    setState(prev => {
-      const plant = prev.plants.get(plantId);
-      if (!plant || plant.stage !== 'harvestable') return prev;
-      
-      const plantType = getPlantType(plant.typeId);
-      if (!plantType) return prev;
-      
-      let yieldAmount = plantType.yieldAmount;
-      const pot = prev.pots.find(p => p.plant === plantId);
-      if (pot) {
-        const potType = getPotType(pot.typeId);
-        if (potType) yieldAmount *= potType.yieldModifier;
-      }
-      yieldAmount *= yieldMultiplier;
-      yieldAmount = Math.round(yieldAmount);
-      
-      const harvested: HarvestedPlant = {
-        id: generateHarvestId(),
-        typeId: plant.typeId,
-        quantity: yieldAmount,
-        harvestedAt: Date.now(),
-        freshness: 1.0,
-      };
-      
-      const newPlants = new Map(prev.plants);
-      newPlants.delete(plantId);
-      
-      const newPots = prev.pots.map(p => p.plant === plantId ? { ...p, plant: null } : p);
-      
-      return {
-        ...prev,
-        plants: newPlants,
-        pots: newPots,
-        harvest: [...prev.harvest, harvested],
-      };
-    });
-  }, [yieldMultiplier]);
-
-  const sellHarvest = useCallback((harvestId: string) => {
-    const item = harvest.find(h => h.id === harvestId);
-    if (!item) return;
-    
-    const plantType = getPlantType(item.typeId);
-    if (!plantType) return;
-    
-    const price = Math.round(plantType.sellPrice * item.quantity * item.freshness * 10) / 10;
-    onAddMoney(price);
-    
-    setState(prev => ({
-      ...prev,
-      harvest: prev.harvest.filter(h => h.id !== harvestId),
-    }));
-  }, [harvest, onAddMoney]);
-
-  const storeHarvest = useCallback((harvestId: string) => {
-    const item = harvest.find(h => h.id === harvestId);
-    if (!item) return;
-    
-    if (onStoreInKitchen(item)) {
-      setState(prev => ({
-        ...prev,
-        harvest: prev.harvest.filter(h => h.id !== harvestId),
-      }));
-    }
-  }, [harvest, onStoreInKitchen]);
+  const { table, light, pots, plants, seeds, harvest } = plantHobby;
+  const kitchenFull = kitchen.storage.length >= kitchen.capacity;
 
   // Slot click handler
   const handleSlotClick = useCallback((slotIndex: number) => {
@@ -307,17 +56,24 @@ export function PlantHobby({
       setSelectedSlot(slotIndex);
       setShowPlantMenu(true);
     } else {
-      const plant = plants.get(pot.plant);
+      const plant = plants[pot.plant];
       if (plant?.stage === 'harvestable') {
-        harvestPlant(pot.plant);
+        harvestPlant(pot.plant, yieldMultiplier);
       }
     }
-  }, [pots, plants, buyPot, harvestPlant]);
+  }, [pots, plants, buyPot, harvestPlant, yieldMultiplier]);
+
+  // Handle planting
+  const handlePlantSeed = useCallback((typeId: string, potId: string) => {
+    plantSeed(typeId, potId);
+    setShowPlantMenu(false);
+    setSelectedSlot(null);
+  }, [plantSeed]);
 
   // Render slots
   const slots = Array.from({ length: table.potSlots }, (_, i) => {
     const pot = pots.find(p => p.slot === i);
-    const plant = pot?.plant ? plants.get(pot.plant) ?? null : null;
+    const plant = pot?.plant ? plants[pot.plant] ?? null : null;
     const hasLight = slotHasLight(i, light.coverage);
     return { index: i, pot, plant, hasLight };
   });
@@ -447,7 +203,7 @@ export function PlantHobby({
         {tab === 'shop' && (
           <div style={{ display: 'grid', gap: 8 }}>
             {PLANT_TYPES.map(plant => {
-              const owned = seeds.get(plant.id) || 0;
+              const owned = seeds[plant.id] || 0;
               const canAfford = money >= plant.seedCost;
               
               return (
@@ -497,7 +253,7 @@ export function PlantHobby({
           seeds={seeds}
           pots={pots}
           selectedSlot={selectedSlot}
-          onSelect={plantSeed}
+          onSelect={handlePlantSeed}
           onClose={() => { setShowPlantMenu(false); setSelectedSlot(null); }}
           theme={theme}
         />
@@ -861,7 +617,7 @@ function PlantMenu({
   onClose,
   theme,
 }: {
-  seeds: Map<string, number>;
+  seeds: Record<string, number>;
   pots: PotInstance[];
   selectedSlot: number | null;
   onSelect: (typeId: string, potId: string) => void;
@@ -869,7 +625,7 @@ function PlantMenu({
   theme: any;
 }) {
   const pot = pots.find(p => p.slot === selectedSlot);
-  const available = PLANT_TYPES.filter(p => (seeds.get(p.id) || 0) > 0);
+  const available = PLANT_TYPES.filter(p => (seeds[p.id] || 0) > 0);
 
   return (
     <div style={{
@@ -913,7 +669,7 @@ function PlantMenu({
                   <div style={{ color: theme.text }}>{plant.name}</div>
                   <div style={{ fontSize: 10, color: theme.textMuted }}>{plant.daysToMature}d</div>
                 </div>
-                <span style={{ color: theme.accent }}>×{seeds.get(plant.id)}</span>
+                <span style={{ color: theme.accent }}>×{seeds[plant.id]}</span>
               </div>
             ))}
           </div>
