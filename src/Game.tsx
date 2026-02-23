@@ -15,6 +15,7 @@ import { ApartmentView } from './apartment/ApartmentView';
 import { PlantHobby } from './hobbies/plants/PlantHobby';
 import { HobbySlot } from './apartment/types';
 import { calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier } from './kitchen/types';
+import { getRentForWeek } from './economy/types';
 // getActiveKitchenBonuses, getBonusMultiplier used for derived values display
 
 // Tick interval
@@ -44,7 +45,11 @@ export function Game() {
   const kitchenBonuses = useMemo(() => getActiveKitchenBonuses(kitchen.storage), [kitchen.storage]);
   const growthMultiplier = useMemo(() => getBonusMultiplier(kitchenBonuses, 'growth'), [kitchenBonuses]);
   const grocerySavings = useMemo(() => calculateGrocerySavings(kitchen.storage), [kitchen.storage]);
-  const weeklyExpenses = economy.weeklyRent + Math.max(0, economy.weeklyGroceryBase - grocerySavings);
+  
+  // Calculate current week and dynamic rent (single source of truth)
+  const currentWeek = Math.ceil(gameDay / 7);
+  const currentRent = getRentForWeek(currentWeek);
+  const weeklyExpenses = currentRent + Math.max(0, economy.weeklyGroceryBase - grocerySavings);
 
   // Game tick - handle time passing (runs once on mount)
   useEffect(() => {
@@ -109,6 +114,10 @@ export function Game() {
           kitchen={kitchen}
           grocerySavings={grocerySavings}
           weeklyExpenses={weeklyExpenses}
+          weeklyIncome={economy.weeklyIncome}
+          currentRent={currentRent}
+          groceryBase={economy.weeklyGroceryBase}
+          currentWeek={currentWeek}
           kitchenBonuses={kitchenBonuses}
           onBack={handleBack}
           theme={theme}
@@ -236,6 +245,10 @@ function KitchenView({
   kitchen,
   grocerySavings,
   weeklyExpenses,
+  weeklyIncome,
+  currentRent,
+  groceryBase,
+  currentWeek,
   kitchenBonuses,
   onBack,
   theme,
@@ -243,10 +256,16 @@ function KitchenView({
   kitchen: any;
   grocerySavings: number;
   weeklyExpenses: number;
+  weeklyIncome: number;
+  currentRent: number;
+  groceryBase: number;
+  currentWeek: number;
   kitchenBonuses: any[];
   onBack: () => void;
   theme: any;
 }) {
+  const netWeekly = weeklyIncome - weeklyExpenses;
+  
   return (
     <div style={{
       background: theme.surface,
@@ -269,20 +288,45 @@ function KitchenView({
         🍳 Kitchen ({kitchen.storage.length}/{kitchen.capacity})
       </h2>
 
-      {/* Expenses */}
+      {/* Weekly finances breakdown */}
       <div style={{
         padding: 12,
         background: theme.bgAlt,
         borderRadius: theme.radiusMd,
         marginBottom: 16,
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ color: theme.textSecondary, fontSize: 12 }}>Grocery savings</span>
-          <span style={{ color: theme.accent, fontSize: 12 }}>-${grocerySavings.toFixed(1)}/wk</span>
+        <div style={{ fontSize: 11, color: theme.textMuted, marginBottom: 8 }}>
+          Week {currentWeek}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ color: theme.text, fontWeight: 600 }}>Weekly expenses</span>
-          <span style={{ color: theme.money, fontWeight: 600 }}>${weeklyExpenses.toFixed(0)}/wk</span>
+        {/* Income */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ color: theme.textSecondary, fontSize: 12 }}>💼 Day job</span>
+          <span style={{ color: theme.accent, fontSize: 12 }}>+${weeklyIncome}</span>
+        </div>
+        {/* Expenses */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ color: theme.textSecondary, fontSize: 12 }}>🏠 Rent</span>
+          <span style={{ color: theme.textSecondary, fontSize: 12 }}>-${currentRent}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ color: theme.textSecondary, fontSize: 12 }}>🛒 Groceries</span>
+          <span style={{ color: theme.textSecondary, fontSize: 12 }}>-${groceryBase}</span>
+        </div>
+        {grocerySavings > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ color: theme.textSecondary, fontSize: 12 }}>🌿 Herb savings</span>
+            <span style={{ color: theme.accent, fontSize: 12 }}>+${grocerySavings.toFixed(1)}</span>
+          </div>
+        )}
+        {/* Net */}
+        <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ color: theme.text, fontWeight: 600 }}>Net weekly</span>
+          <span style={{ 
+            color: netWeekly >= 0 ? theme.accent : theme.danger, 
+            fontWeight: 600 
+          }}>
+            {netWeekly >= 0 ? '+' : ''}${netWeekly.toFixed(0)}/wk
+          </span>
         </div>
       </div>
 

@@ -3,27 +3,30 @@
  * 
  * Single source of truth for all game state.
  * Persists to localStorage automatically.
+ * 
+ * Uses engine modules for all game logic calculations.
  */
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+// Engine
+import { engine, MS_PER_GAME_DAY, TickInput } from '../engine';
+
 // Types
 import { ApartmentState, INITIAL_APARTMENT } from '../apartment/types';
-import { KitchenState, INITIAL_KITCHEN, FoodItem, decayKitchenItems } from '../kitchen/types';
+import { KitchenState, INITIAL_KITCHEN, FoodItem } from '../kitchen/types';
 import { EconomyState, INITIAL_ECONOMY } from '../economy/types';
+import { MarketState, MarketRentalTier, INITIAL_MARKET, isMarketDay, MARKET_RENTALS } from '../market/types';
 import {
-  PlantInstance, HarvestedPlant, PLANT_TYPES,
-  getPlantType, getGrowthStage, generatePlantId, generateHarvestId,
+  PlantInstance, HarvestedPlant,
+  getPlantType, generatePlantId, generateHarvestId,
 } from '../hobbies/plants/types';
 import {
   TableType, LightType, PotInstance,
   TABLE_TYPES, LIGHT_TYPES, POT_TYPES,
   getPotType, slotHasLight, generatePotId,
 } from '../hobbies/plants/equipment';
-
-// Time constants
-const MS_PER_GAME_DAY = 60 * 60 * 1000;
 
 // Plant state (serializable - uses Record instead of Map)
 interface PlantHobbyState {
@@ -51,10 +54,13 @@ interface GameState {
   kitchen: KitchenState;
   economy: EconomyState;
   plantHobby: PlantHobbyState;
+  market: MarketState;
   
   // Time
   gameDay: number;
   lastTick: number;
+  gameStartTime: number;
+  lastRentPaid: number;
   
   // UI
   view: 'apartment' | 'kitchen' | 'hobby-plants' | 'hobby-select';
@@ -91,6 +97,11 @@ interface GameActions {
   harvestPlant: (plantId: string, yieldMultiplier: number) => void;
   sellHarvest: (harvestId: string) => void;
   storeHarvest: (harvestId: string) => boolean;
+  
+  // Market
+  setMarketRental: (tier: MarketRentalTier) => void;
+  sellWholesale: (harvestId: string) => void;
+  sellAtMarket: (harvestId: string) => void;
 }
 
 type GameStore = GameState & GameActions;
@@ -104,8 +115,11 @@ export const useGameStore = create<GameStore>()(
       kitchen: INITIAL_KITCHEN,
       economy: INITIAL_ECONOMY,
       plantHobby: INITIAL_PLANT_STATE,
+      market: INITIAL_MARKET,
       gameDay: 1,
       lastTick: Date.now(),
+      gameStartTime: Date.now(),
+      lastRentPaid: Date.now(),
       view: 'apartment',
       selectedSlot: 0,
       
@@ -153,84 +167,88 @@ export const useGameStore = create<GameStore>()(
       },
       
       // Time
-      skipTime: (days) => set((state) => ({
-        lastTick: state.lastTick - (days * MS_PER_GAME_DAY)
-      })),
+      skipTime: (days) => {
+        const state = get();
+        
+        // Build TickInput for the engine
+        // Use lastTick as the base - skipTime advances from current game position, not real time
+        const tickInput: TickInput = {
+          lastTick: state.lastTick,
+          currentTime: state.lastTick, // Start from current game position
+          gameStartTime: state.gameStartTime,
+          plants: state.plantHobby.plants,
+          pots: state.plantHobby.pots,
+          harvest: state.plantHobby.harvest,
+          lightCoverage: state.plantHobby.light.coverage,
+          kitchen: state.kitchen,
+          economy: state.economy,
+          rentPerWeek: state.economy.weeklyRent,
+          groceryBase: state.economy.weeklyGroceryBase,
+          weeklyIncome: state.economy.weeklyIncome,
+          lastRentPaid: state.lastRentPaid,
+        };
+        
+        const result = engine.time.skipTime(tickInput, days);
+        
+        set({
+          kitchen: result.kitchen,
+          economy: result.economy,
+          gameDay: result.gameDay,
+          lastTick: result.lastTick,
+          lastRentPaid: result.lastRentPaid,
+          plantHobby: {
+            ...state.plantHobby,
+            plants: result.plants,
+            harvest: result.harvest,
+          },
+        });
+      },
       
       tick: () => {
         const state = get();
         const now = Date.now();
+        
+        // Quick check before building full input
         const elapsed = now - state.lastTick;
-        const daysPassed = elapsed / MS_PER_GAME_DAY;
+        const minElapsed = MS_PER_GAME_DAY * 0.001; // 3.6 seconds
         
-        if (daysPassed < 0.001) return;
+        if (elapsed < minElapsed) return;
         
-        // Decay kitchen items
-        const newKitchen = {
-          ...state.kitchen,
-          storage: decayKitchenItems(state.kitchen.storage, daysPassed),
+        // Build TickInput for the engine
+        const tickInput: TickInput = {
+          lastTick: state.lastTick,
+          currentTime: now,
+          gameStartTime: state.gameStartTime,
+          plants: state.plantHobby.plants,
+          pots: state.plantHobby.pots,
+          harvest: state.plantHobby.harvest,
+          lightCoverage: state.plantHobby.light.coverage,
+          kitchen: state.kitchen,
+          economy: state.economy,
+          rentPerWeek: state.economy.weeklyRent,
+          groceryBase: state.economy.weeklyGroceryBase,
+          weeklyIncome: state.economy.weeklyIncome,
+          lastRentPaid: state.lastRentPaid,
         };
         
-        // Weekly expenses
-        const prevWeek = Math.floor((state.gameDay - 1) / 7);
-        const newDay = state.gameDay + daysPassed;
-        const newWeek = Math.floor((newDay - 1) / 7);
+        const result = engine.time.processTick(tickInput);
         
-        let newMoney = state.economy.money;
-        if (newWeek > prevWeek) {
-          const weeklyExpenses = state.economy.weeklyRent + state.economy.weeklyGroceryBase;
-          newMoney -= weeklyExpenses;
-        }
-        
-        // Grow plants
-        const { plantHobby } = state;
-        let plantsChanged = false;
-        const newPlants: Record<string, PlantInstance> = {};
-        
-        for (const [id, plant] of Object.entries(plantHobby.plants)) {
-          if (plant.stage === 'harvestable') {
-            newPlants[id] = plant;
-            continue;
-          }
-          
-          const plantType = getPlantType(plant.typeId);
-          if (!plantType) {
-            newPlants[id] = plant;
-            continue;
-          }
-          
-          // Calculate growth rate
-          let growthRate = 1 / plantType.daysToMature;
-          if (plant.hasLight) growthRate *= plantHobby.light.growthBoost;
-          else growthRate *= 0.5;
-          
-          const pot = plantHobby.pots.find(p => p.plant === id);
-          if (pot) {
-            const potType = getPotType(pot.typeId);
-            if (potType) growthRate *= potType.growthModifier;
-          }
-          
-          const newProgress = Math.min(1, plant.growthProgress + growthRate * daysPassed);
-          if (newProgress !== plant.growthProgress) {
-            plantsChanged = true;
-            newPlants[id] = {
-              ...plant,
-              growthProgress: newProgress,
-              stage: getGrowthStage(newProgress),
-            };
-          } else {
-            newPlants[id] = plant;
-          }
+        // Log events for debugging (can be expanded for UI notifications)
+        if (result.events.length > 0) {
+          console.log('[GameStore] Tick events:', result.events);
         }
         
         set({
-          kitchen: newKitchen,
-          economy: { ...state.economy, money: newMoney },
-          gameDay: newDay,
-          lastTick: now,
-          plantHobby: plantsChanged 
-            ? { ...plantHobby, plants: newPlants }
-            : plantHobby,
+          kitchen: result.kitchen,
+          economy: result.economy,
+          gameDay: result.gameDay,
+          lastTick: result.lastTick,
+          lastRentPaid: result.lastRentPaid,
+          plantHobby: {
+            ...state.plantHobby,
+            plants: result.plants,
+            harvest: result.harvest,
+          },
         });
       },
       
@@ -387,25 +405,19 @@ export const useGameStore = create<GameStore>()(
         const plant = plantHobby.plants[plantId];
         if (!plant || plant.stage !== 'harvestable') return;
         
-        const plantType = getPlantType(plant.typeId);
-        if (!plantType) return;
-        
-        let yieldAmount = plantType.yieldAmount;
+        // Get pot yield modifier
         const pot = plantHobby.pots.find(p => p.plant === plantId);
+        let potYieldMod = 1;
         if (pot) {
           const potType = getPotType(pot.typeId);
-          if (potType) yieldAmount *= potType.yieldModifier;
+          if (potType) potYieldMod = potType.yieldModifier;
         }
-        yieldAmount *= yieldMultiplier;
-        yieldAmount = Math.round(yieldAmount);
         
-        const harvested: HarvestedPlant = {
-          id: generateHarvestId(),
-          typeId: plant.typeId,
-          quantity: yieldAmount,
-          harvestedAt: Date.now(),
-          freshness: 1.0,
-        };
+        // Use engine to calculate harvest
+        const totalYieldMult = potYieldMod * yieldMultiplier;
+        const harvested = engine.plants.calculateHarvest(plant, totalYieldMult);
+        
+        if (!harvested) return;
         
         // Remove plant from plants object
         const { [plantId]: _, ...remainingPlants } = plantHobby.plants;
@@ -477,6 +489,63 @@ export const useGameStore = create<GameStore>()(
         return true;
       },
       
+      // Market actions
+      setMarketRental: (tier) => {
+        set((state) => ({
+          market: { ...state.market, rentalTier: tier }
+        }));
+      },
+      
+      sellWholesale: (harvestId) => {
+        const state = get();
+        const item = state.plantHobby.harvest.find(h => h.id === harvestId);
+        if (!item) return;
+        
+        const plantType = getPlantType(item.typeId);
+        if (!plantType) return;
+        
+        // Wholesale: 50% of base price
+        const price = Math.round(plantType.sellPrice * item.quantity * 0.5 * 10) / 10;
+        
+        set({
+          economy: { ...state.economy, money: state.economy.money + price },
+          plantHobby: {
+            ...state.plantHobby,
+            harvest: state.plantHobby.harvest.filter(h => h.id !== harvestId),
+          }
+        });
+      },
+      
+      sellAtMarket: (harvestId) => {
+        const state = get();
+        
+        // Check if market is open
+        const currentDay = Math.floor(state.gameDay);
+        if (!isMarketDay(currentDay, state.market.rentalTier, state.market.lastMarketDay)) {
+          console.log('[Store] Cannot sell - market not open');
+          return;
+        }
+        
+        const item = state.plantHobby.harvest.find(h => h.id === harvestId);
+        if (!item) return;
+        
+        const plantType = getPlantType(item.typeId);
+        if (!plantType) return;
+        
+        // Market: 100% base + freshness bonus (90-110%)
+        const freshnessBonus = 0.9 + (item.freshness * 0.2);
+        const price = Math.round(plantType.sellPrice * item.quantity * freshnessBonus * 10) / 10;
+        
+        set({
+          economy: { ...state.economy, money: state.economy.money + price },
+          market: { ...state.market, lastMarketDay: currentDay },
+          plantHobby: {
+            ...state.plantHobby,
+            harvest: state.plantHobby.harvest.filter(h => h.id !== harvestId),
+          }
+        });
+      },
+      
     }),
     {
       name: 'side-hustle-game',
@@ -486,43 +555,46 @@ export const useGameStore = create<GameStore>()(
         kitchen: state.kitchen,
         economy: state.economy,
         plantHobby: state.plantHobby,
+        market: state.market,
         gameDay: state.gameDay,
         lastTick: state.lastTick,
+        gameStartTime: state.gameStartTime,
+        lastRentPaid: state.lastRentPaid,
         // Don't persist view/selectedSlot - start fresh
       }),
+      // Merge persisted state with defaults to handle missing fields from old saves
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<GameState>;
+        return {
+          ...currentState,
+          ...persisted,
+          // Ensure economy has all fields (handles old saves missing weeklyIncome)
+          economy: {
+            ...INITIAL_ECONOMY,
+            ...persisted.economy,
+          },
+          // Ensure market state exists (handles old saves)
+          market: {
+            ...INITIAL_MARKET,
+            ...persisted.market,
+          },
+        };
+      },
     }
   )
 );
 
-// Selectors for derived state
+// Selectors for derived state (use engine.kitchen functions)
 export const selectKitchenBonuses = (state: GameState) => {
-  // Get bonuses from stored items that have them
-  const bonuses: Array<{ type: string; amount: number; source: string }> = [];
-  
-  for (const item of state.kitchen.storage) {
-    // Only active if fresh enough
-    if (item.freshness > 0.3 && item.bonus) {
-      bonuses.push({
-        type: item.bonus.type,
-        amount: item.bonus.amount,
-        source: item.name,
-      });
-    }
-  }
-  
-  return bonuses;
+  return engine.kitchen.getActiveKitchenBonuses(state.kitchen.storage);
 };
 
 export const selectGrowthMultiplier = (state: GameState) => {
-  const bonuses = selectKitchenBonuses(state);
-  return bonuses
-    .filter(b => b.type === 'growth')
-    .reduce((mult, b) => mult * b.amount, 1);
+  const bonuses = engine.kitchen.getActiveKitchenBonuses(state.kitchen.storage);
+  return engine.kitchen.getBonusMultiplier(bonuses, 'growth');
 };
 
 export const selectYieldMultiplier = (state: GameState) => {
-  const bonuses = selectKitchenBonuses(state);
-  return bonuses
-    .filter(b => b.type === 'yield')
-    .reduce((mult, b) => mult * b.amount, 1);
+  const bonuses = engine.kitchen.getActiveKitchenBonuses(state.kitchen.storage);
+  return engine.kitchen.getBonusMultiplier(bonuses, 'yield');
 };

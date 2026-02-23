@@ -1,78 +1,44 @@
 /**
- * Side Hustle Simulator - Game Engine
+ * Game Engine - Unified export of all pure game logic
  * 
- * This module exports all engine functionality and provides
- * initialization/shutdown hooks.
+ * Usage:
+ *   import { engine } from './engine';
+ *   
+ *   // Process a game tick
+ *   const result = engine.time.processTick(input);
+ *   
+ *   // Calculate plant growth
+ *   const newPlant = engine.plants.calculateGrowth(plant, days, boost);
+ *   
+ *   // Check if player can afford something
+ *   const canBuy = engine.economy.canAfford(economy, 50);
  */
 
-// Re-export everything
-export * from './types';
-export * from './events';
-export * from './tick';
-export * from './save';
-export * from './economy';
+import * as plantEngine from './plantEngine';
+import * as economyEngine from './economyEngine';
+import * as kitchenEngine from './kitchenEngine';
+import * as timeEngine from './timeEngine';
 
-// Import for initialization
-import { gameLoop } from './tick';
-import { load, hasSave, startAutoSave, stopAutoSave } from './save';
-import { initEconomy } from './economy';
+// Re-export individual engines
+export { plantEngine, economyEngine, kitchenEngine, timeEngine };
 
-/**
- * Initialize the game engine
- * Call this once on app startup
- */
-export function initEngine(): void {
-  console.log('Initializing Side Hustle Simulator engine...');
-  
-  // Initialize subsystems
-  initEconomy();
-  
-  // Try to load existing save
-  if (hasSave()) {
-    console.log('Found existing save, loading...');
-    load();
-  } else {
-    console.log('No save found, starting fresh');
-  }
-  
-  // Start auto-save
-  startAutoSave();
-  
-  // Start the game loop
-  gameLoop.start();
-  
-  console.log('Engine initialized and running');
-}
+// Unified engine object for convenience
+export const engine = {
+  plants: plantEngine,
+  economy: economyEngine,
+  kitchen: kitchenEngine,
+  time: timeEngine,
+} as const;
 
-/**
- * Shut down the game engine
- * Call this on app close
- */
-export function shutdownEngine(): void {
-  console.log('Shutting down engine...');
-  
-  // Stop auto-save
-  stopAutoSave();
-  
-  // Stop game loop
-  gameLoop.stop();
-  
-  // Final save
-  import('./save').then(({ save }) => save());
-  
-  console.log('Engine shut down');
-}
+// Re-export commonly used types
+export type { TickInput, TickOutput, TickEvent } from './timeEngine';
 
-/**
- * Pause the game (e.g., when window loses focus)
- */
-export function pauseEngine(): void {
-  gameLoop.stop();
-}
+// Re-export time constants
+export {
+  MS_PER_GAME_DAY,
+  MS_PER_GAME_WEEK,
+  DAYS_PER_WEEK,
+} from './timeEngine';
 
-/**
- * Resume the game
- */
-export function resumeEngine(): void {
-  gameLoop.start();
-}
+// Default export
+export default engine;

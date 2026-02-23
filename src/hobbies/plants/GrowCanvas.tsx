@@ -3,6 +3,12 @@
  * 
  * Renders the table, pots, plants, and grow light using PixiJS.
  * React handles the UI chrome, PixiJS handles the visuals.
+ * 
+ * Animations ("juice"):
+ * - Leaf sway: Subtle sine-wave movement on plant graphics
+ * - Light flicker: Subtle glow variation on the grow light
+ * - Growth pulse: Visual pulse when plant completes a growth stage
+ * - Harvest particles: Sparkle burst when harvesting
  */
 
 import { useEffect, useRef, useCallback } from 'react';
@@ -10,6 +16,15 @@ import { Application, Graphics, Container, Text, TextStyle } from 'pixi.js';
 import { useGameStore } from '../../store/gameStore';
 import { getPlantType, PlantInstance } from './types';
 import { PotInstance, slotHasLight } from './equipment';
+import {
+  calcLeafSway,
+  calcLightFlicker,
+  calcGrowthPulse,
+  createHarvestParticles,
+  updateParticles,
+  Particle,
+  ANIMATION_CONFIG,
+} from './animations';
 
 interface GrowCanvasProps {
   width: number;
@@ -34,6 +49,16 @@ const COLORS = {
   highlight: 0x81C784,
 };
 
+// Animation state interface
+interface AnimationState {
+  startTime: number;
+  activePulses: Map<string, number>;  // plantId -> startTime
+  activeParticles: Map<number, Particle[]>;  // slotIndex -> particles
+  plantStages: Map<string, string>;  // plantId -> last known stage
+  leafContainers: Map<number, Container>;  // slotIndex -> leaf container for sway
+  leafBasePositions: Map<number, { x: number; y: number }>;  // slotIndex -> base position for sway
+}
+
 export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
@@ -43,7 +68,30 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
     table: Graphics;
     potsContainer: Container;
     pots: Map<number, Container>;
+    particlesContainer: Container;
   } | null>(null);
+  
+  // Animation state
+  const animRef = useRef<AnimationState>({
+    startTime: Date.now(),
+    activePulses: new Map(),
+    activeParticles: new Map(),
+    plantStages: new Map(),
+    leafContainers: new Map(),
+    leafBasePositions: new Map(),
+  });
+  
+  // Track previous plants to detect harvests
+  const prevPlantsRef = useRef<Record<string, PlantInstance>>({});
+  
+  // Store latest callback in ref so PixiJS handlers always use current version
+  const onSlotClickRef = useRef(onSlotClick);
+  onSlotClickRef.current = onSlotClick;
+  
+  // Stable callback that always calls the latest version
+  const handleSlotClick = useCallback((index: number) => {
+    onSlotClickRef.current(index);
+  }, []);
 
   // Get store state
   const plantHobby = useGameStore(s => s.plantHobby);
@@ -72,11 +120,57 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
       appRef.current = app;
 
       // Create scene structure
-      const scene = createScene(app, width, height, table.potSlots, light.coverage, onSlotClick);
+      const scene = createScene(app, width, height, table.potSlots, light.coverage, handleSlotClick);
       sceneRef.current = scene;
 
       // Initial render of pots (useEffect won't trigger since state hasn't changed)
-      updatePots(scene.potsContainer, scene.pots, table.potSlots, pots, plants, light.coverage, width, height, onSlotClick);
+      updatePots(scene.potsContainer, scene.pots, table.potSlots, pots, plants, light.coverage, width, height, handleSlotClick, animRef.current);
+      
+      // Animation ticker
+      app.ticker.add(() => {
+        if (!sceneRef.current) return;
+        
+        const anim = animRef.current;
+        const elapsed = Date.now() - anim.startTime;
+        
+        // Light flicker
+        const lightAlpha = calcLightFlicker(elapsed);
+        if (sceneRef.current.lightGlow) {
+          sceneRef.current.lightGlow.alpha = lightAlpha;
+        }
+        
+        // Leaf sway - update all leaf containers (additive to base position)
+        for (const [slotIndex, leafContainer] of anim.leafContainers) {
+          const swayOffset = calcLeafSway(elapsed, slotIndex);
+          const basePos = anim.leafBasePositions.get(slotIndex) || { x: 0, y: 0 };
+          leafContainer.x = basePos.x + swayOffset;
+        }
+        
+        // Growth pulses
+        for (const [plantId, startTime] of anim.activePulses) {
+          const progressMs = Date.now() - startTime;
+          const pulse = calcGrowthPulse(progressMs);
+          
+          if (pulse.complete) {
+            anim.activePulses.delete(plantId);
+          }
+          // Scale is applied in drawPot via pulseScale
+        }
+        
+        // Update particles
+        const deltaMs = app.ticker.deltaMS;
+        for (const [slotIndex, particles] of anim.activeParticles) {
+          const updated = updateParticles(particles, deltaMs);
+          if (updated.length === 0) {
+            anim.activeParticles.delete(slotIndex);
+          } else {
+            anim.activeParticles.set(slotIndex, updated);
+          }
+        }
+        
+        // Render particles
+        renderParticles(sceneRef.current.particlesContainer, anim.activeParticles);
+      });
     };
 
     init();
@@ -93,14 +187,56 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
     if (!sceneRef.current || !appRef.current) return;
 
     const scene = sceneRef.current;
+    const anim = animRef.current;
     
     // Update light glow based on coverage
     updateLight(scene.light, scene.lightGlow, light.coverage, table.potSlots, width);
     
-    // Update pots and plants
-    updatePots(scene.potsContainer, scene.pots, table.potSlots, pots, plants, light.coverage, width, height, onSlotClick);
+    // Check for stage changes (growth pulses)
+    for (const [plantId, plant] of Object.entries(plants)) {
+      const lastStage = anim.plantStages.get(plantId);
+      if (lastStage && lastStage !== plant.stage && plant.stage !== 'seed') {
+        // Stage changed! Trigger pulse
+        anim.activePulses.set(plantId, Date.now());
+      }
+      anim.plantStages.set(plantId, plant.stage);
+    }
     
-  }, [table, light, pots, plants, width, height, onSlotClick]);
+    // Clean up stages for removed plants and detect harvests
+    const prevPlants = prevPlantsRef.current;
+    for (const plantId of anim.plantStages.keys()) {
+      if (!plants[plantId]) {
+        anim.plantStages.delete(plantId);
+        
+        // Check if this was a harvest (plant was harvestable)
+        const prevPlant = prevPlants[plantId];
+        if (prevPlant && prevPlant.stage === 'harvestable') {
+          // Calculate particle position based on pot slot
+          const potWidth = 60;
+          const spacing = 10;
+          const totalWidth = table.potSlots * potWidth + (table.potSlots - 1) * spacing;
+          const startX = (width - totalWidth) / 2;
+          const potY = height - 35 - 50 - 5; // Same as in updatePots
+          
+          const slotX = startX + prevPlant.potSlot * (potWidth + spacing) + potWidth / 2;
+          const slotY = potY + 10; // Near top of pot
+          
+          // Trigger harvest particles
+          anim.activeParticles.set(
+            prevPlant.potSlot,
+            createHarvestParticles(slotX, slotY)
+          );
+        }
+      }
+    }
+    
+    // Update previous plants ref
+    prevPlantsRef.current = { ...plants };
+    
+    // Update pots and plants
+    updatePots(scene.potsContainer, scene.pots, table.potSlots, pots, plants, light.coverage, width, height, handleSlotClick, anim);
+    
+  }, [table, light, pots, plants, width, height, handleSlotClick]);
 
   return (
     <div 
@@ -141,13 +277,17 @@ function createScene(
   const potsContainer = new Container();
   app.stage.addChild(potsContainer);
 
+  // Particles container (on top of everything)
+  const particlesContainer = new Container();
+  app.stage.addChild(particlesContainer);
+
   // Initialize pots map
   const pots = new Map<number, Container>();
 
   // Draw initial light
   updateLight(light, lightGlow, lightCoverage, potSlots, width);
 
-  return { light, lightGlow, table, potsContainer, pots };
+  return { light, lightGlow, table, potsContainer, pots, particlesContainer };
 }
 
 function drawTable(g: Graphics, width: number, height: number) {
@@ -233,6 +373,25 @@ function updateLight(
   lightG.fill(intensity > 0.1 ? 0x4CAF50 : 0x757575);
 }
 
+/**
+ * Render particles to the particles container
+ */
+function renderParticles(
+  container: Container,
+  particlesMap: Map<number, Particle[]>
+) {
+  container.removeChildren();
+  
+  for (const [, particles] of particlesMap) {
+    for (const p of particles) {
+      const g = new Graphics();
+      g.circle(p.x, p.y, p.size);
+      g.fill({ color: p.color, alpha: p.alpha });
+      container.addChild(g);
+    }
+  }
+}
+
 function updatePots(
   container: Container,
   potsMap: Map<number, Container>,
@@ -242,7 +401,8 @@ function updatePots(
   lightCoverage: number,
   width: number,
   height: number,
-  onSlotClick: (index: number) => void
+  onSlotClick: (index: number) => void,
+  animState: AnimationState
 ) {
   const potWidth = 60;
   const potHeight = 50;
@@ -275,8 +435,18 @@ function updatePots(
     const potInstance = potInstances.find(p => p.slot === i);
     const hasLight = slotHasLight(i, lightCoverage);
     const plant = potInstance?.plant ? plants[potInstance.plant] : null;
+    
+    // Calculate pulse scale if this plant has an active pulse
+    let pulseScale = 1;
+    let pulseGlow = 0;
+    if (plant && animState.activePulses.has(plant.id)) {
+      const pulseStart = animState.activePulses.get(plant.id)!;
+      const pulse = calcGrowthPulse(Date.now() - pulseStart);
+      pulseScale = pulse.scale;
+      pulseGlow = pulse.glowAlpha;
+    }
 
-    drawPot(potContainer, potWidth, potHeight, potInstance, plant, hasLight, i);
+    drawPot(potContainer, potWidth, potHeight, potInstance, plant, hasLight, i, animState, pulseScale, pulseGlow);
   }
 
   // Remove extra slots if table was downgraded
@@ -295,7 +465,10 @@ function drawPot(
   potInstance: PotInstance | undefined,
   plant: PlantInstance | null,
   hasLight: boolean,
-  slotIndex: number
+  slotIndex: number,
+  animState: AnimationState,
+  pulseScale: number = 1,
+  pulseGlow: number = 0
 ) {
   const g = new Graphics();
   container.addChild(g);
@@ -341,7 +514,30 @@ function drawPot(
 
   // Draw plant first (behind pot rim)
   if (plant) {
-    drawPlant(container, width, height, plant);
+    // Create a leaf container for sway animation
+    const leafContainer = new Container();
+    container.addChildAt(leafContainer, 0);
+    animState.leafContainers.set(slotIndex, leafContainer);
+    
+    // Growth pulse glow effect
+    if (pulseGlow > 0) {
+      const glow = new Graphics();
+      glow.circle(width / 2, height / 2 - 10, 30);
+      glow.fill({ color: 0x81C784, alpha: pulseGlow * 0.5 });
+      container.addChildAt(glow, 0);
+    }
+    
+    drawPlant(leafContainer, width, height, plant, pulseScale);
+    
+    // Store base position for sway animation (accounts for pulse scaling pivot)
+    // When pulsing, position is set to center for scaling; sway should be additive
+    const baseX = pulseScale !== 1 ? width / 2 : 0;
+    const baseY = pulseScale !== 1 ? height / 2 : 0;
+    animState.leafBasePositions.set(slotIndex, { x: baseX, y: baseY });
+  } else {
+    // Clear leaf container refs if no plant
+    animState.leafContainers.delete(slotIndex);
+    animState.leafBasePositions.delete(slotIndex);
   }
 
   // Pot body
@@ -407,9 +603,16 @@ function drawPot(
   }
 }
 
-function drawPlant(container: Container, potWidth: number, potHeight: number, plant: PlantInstance) {
+function drawPlant(container: Container, potWidth: number, potHeight: number, plant: PlantInstance, scale: number = 1) {
   const g = new Graphics();
   container.addChildAt(g, 0);
+  
+  // Apply scale for pulse effect
+  if (scale !== 1) {
+    container.scale.set(scale);
+    container.pivot.set(potWidth / 2, potHeight / 2);
+    container.position.set(potWidth / 2, potHeight / 2);
+  }
 
   const plantType = getPlantType(plant.typeId);
   if (!plantType) return;

@@ -9,13 +9,22 @@ export interface EconomyState {
   money: number;
   weeklyRent: number;
   weeklyGroceryBase: number;
+  weeklyIncome: number;
 }
 
 export const INITIAL_ECONOMY: EconomyState = {
   money: 100,
-  weeklyRent: 50,
-  weeklyGroceryBase: 50,
+  weeklyRent: 50,          // Flat rent
+  weeklyGroceryBase: 10,   // Base groceries, herbs reduce this
+  weeklyIncome: 60,        // Day job covers rent + groceries
 };
+
+/**
+ * Get rent amount (flat rate, no scaling)
+ */
+export function getRentForWeek(_week: number): number {
+  return 50;  // Flat $50/week
+}
 
 export interface Transaction {
   amount: number;

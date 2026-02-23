@@ -33,7 +33,7 @@ export const PLANT_TYPES: PlantType[] = [
     emoji: '🌿',
     daysToMature: 7,
     yieldAmount: 2,
-    sellPrice: 4,
+    sellPrice: 6,          // was 4 (+50%)
     seedCost: 5,
     color: '#4CAF50',
     description: 'Fast-growing kitchen staple. Boosts plant growth.',
@@ -47,7 +47,7 @@ export const PLANT_TYPES: PlantType[] = [
     emoji: '🌱',
     daysToMature: 5,
     yieldAmount: 3,
-    sellPrice: 3,
+    sellPrice: 5,          // was 3 (+67%)
     seedCost: 4,
     color: '#81C784',
     description: 'Spreads quickly. Keeps things fresh longer.',
@@ -61,7 +61,7 @@ export const PLANT_TYPES: PlantType[] = [
     emoji: '🪴',
     daysToMature: 10,
     yieldAmount: 2,
-    sellPrice: 5,
+    sellPrice: 8,          // was 5 (+60%)
     seedCost: 6,
     color: '#66BB6A',
     description: 'Slow but valuable. Great for groceries.',
@@ -74,7 +74,7 @@ export const PLANT_TYPES: PlantType[] = [
     emoji: '🌾',
     daysToMature: 6,
     yieldAmount: 2,
-    sellPrice: 4,
+    sellPrice: 6,          // was 4 (+50%)
     seedCost: 5,
     color: '#AED581',
     description: 'Bolts fast. Boosts harvest yields.',
@@ -88,7 +88,7 @@ export const PLANT_TYPES: PlantType[] = [
     emoji: '🧅',
     daysToMature: 8,
     yieldAmount: 4,
-    sellPrice: 2,
+    sellPrice: 3,          // was 2 (+50%)
     seedCost: 4,
     color: '#9CCC65',
     description: 'High yield, lower price per unit.',
