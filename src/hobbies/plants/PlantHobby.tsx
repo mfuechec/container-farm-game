@@ -61,9 +61,11 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
     if (!container) return;
     
     const updateSize = () => {
-      const containerWidth = container.clientWidth;
+      // Account for container padding (8px on each side = 16px total)
+      const containerPadding = 16;
+      const availableWidth = container.clientWidth - containerPadding;
       // Maintain 2:1 aspect ratio, with min/max bounds
-      const width = Math.max(280, Math.min(containerWidth, 600));
+      const width = Math.max(280, Math.min(availableWidth, 600));
       const height = Math.round(width * 0.5); // 2:1 aspect ratio
       setCanvasSize({ width, height });
     };
