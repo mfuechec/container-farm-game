@@ -97,27 +97,12 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
   const plantHobby = useGameStore(s => s.plantHobby);
   const { table, light, pots, plants } = plantHobby;
 
-  // Initialize PixiJS - recreate when dimensions change
+  // Track current dimensions for resize detection
+  const dimensionsRef = useRef({ width: 0, height: 0 });
+  
+  // Initialize PixiJS once on mount
   useEffect(() => {
-    if (!canvasRef.current) return;
-    
-    // Clean up existing app if dimensions changed
-    if (appRef.current) {
-      try {
-        // Stop the ticker first to prevent any callbacks during destruction
-        appRef.current.ticker.stop();
-        appRef.current.destroy(true, { children: true });
-      } catch (e) {
-        // PixiJS destroy can throw if resize observer is active
-        console.warn('PixiJS cleanup warning:', e);
-      }
-      appRef.current = null;
-      sceneRef.current = null;
-      // Clear the container
-      if (canvasRef.current) {
-        canvasRef.current.innerHTML = '';
-      }
-    }
+    if (!canvasRef.current || appRef.current) return;
 
     const app = new Application();
     
@@ -129,6 +114,7 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
         antialias: true,
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
+        resizeTo: undefined, // Disable PixiJS's internal resize observer
       });
 
       if (canvasRef.current) {
@@ -136,12 +122,13 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
       }
 
       appRef.current = app;
+      dimensionsRef.current = { width, height };
 
       // Create scene structure
       const scene = createScene(app, width, height, table.potSlots, light.coverage, handleSlotClick);
       sceneRef.current = scene;
 
-      // Initial render of pots (useEffect won't trigger since state hasn't changed)
+      // Initial render of pots
       updatePots(scene.potsContainer, scene.pots, table.potSlots, pots, plants, light.coverage, width, height, handleSlotClick, animRef.current);
       
       // Animation ticker
@@ -194,11 +181,36 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
     init();
 
     return () => {
-      app.destroy(true, { children: true });
+      try {
+        app.destroy(true, { children: true });
+      } catch (e) {
+        console.warn('PixiJS cleanup warning:', e);
+      }
       appRef.current = null;
       sceneRef.current = null;
     };
-  }, [width, height]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only initialize once on mount
+
+  // Handle resize by recreating the scene (not the app)
+  useEffect(() => {
+    if (!appRef.current || !sceneRef.current) return;
+    if (dimensionsRef.current.width === width && dimensionsRef.current.height === height) return;
+    
+    const app = appRef.current;
+    dimensionsRef.current = { width, height };
+    
+    // Resize the renderer
+    app.renderer.resize(width, height);
+    
+    // Clear and recreate the scene with new dimensions
+    app.stage.removeChildren();
+    const scene = createScene(app, width, height, table.potSlots, light.coverage, handleSlotClick);
+    sceneRef.current = scene;
+    
+    // Re-render pots with new dimensions
+    updatePots(scene.potsContainer, scene.pots, table.potSlots, pots, plants, light.coverage, width, height, handleSlotClick, animRef.current);
+  }, [width, height, table.potSlots, light.coverage, pots, plants, handleSlotClick]);
 
   // Update scene when state changes
   useEffect(() => {
