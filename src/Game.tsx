@@ -5,10 +5,11 @@
  * Components read from store and dispatch actions.
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from './theme';
 import { useGameStore } from './store/gameStore';
 import { useShallow } from 'zustand/react/shallow';
+import { audio } from './engine/audio';
 
 // Components
 import { ApartmentView } from './apartment/ApartmentView';
@@ -24,6 +25,16 @@ const TICK_INTERVAL = 1000;
 
 export function Game() {
   const { theme, toggleTheme, isDark } = useTheme();
+  const [isMuted, setIsMuted] = useState(() => audio.isMuted());
+
+  const toggleMute = () => {
+    const newMuted = audio.toggleMute();
+    setIsMuted(newMuted);
+    if (!newMuted) {
+      // Play a click sound when unmuting to confirm audio works
+      audio.play('click');
+    }
+  };
   
   // Store state - use shallow to prevent unnecessary re-renders
   const { view, apartment, kitchen, economy, gameDay } = useGameStore(
@@ -156,6 +167,9 @@ export function Game() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button onClick={() => skipTime(1)} style={devBtnStyle(theme)}>+1 Day</button>
           <button onClick={() => skipTime(7)} style={devBtnStyle(theme)}>+1 Week</button>
+          <button onClick={toggleMute} style={devBtnStyle(theme)} title={isMuted ? 'Unmute' : 'Mute'}>
+            {isMuted ? '🔇' : '🔊'}
+          </button>
           <button onClick={toggleTheme} style={devBtnStyle(theme)}>
             {isDark ? '☀️' : '🌙'}
           </button>

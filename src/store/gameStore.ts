@@ -12,6 +12,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 // Engine
 import { engine, MS_PER_GAME_DAY, TickInput } from '../engine';
+import { audio } from '../engine/audio';
 
 // Types
 import { ApartmentState, INITIAL_APARTMENT } from '../apartment/types';
@@ -352,6 +353,7 @@ export const useGameStore = create<GameStore>()(
         if (!plantType) return;
         if (!get().spendMoney(plantType.seedCost * qty)) return;
         
+        audio.play('buy');
         set({
           plantHobby: {
             ...state.plantHobby,
@@ -369,6 +371,7 @@ export const useGameStore = create<GameStore>()(
         if (!get().spendMoney(potType.cost)) return;
         if (state.plantHobby.pots.some(p => p.slot === slot)) return;
         
+        audio.play('buy');
         const newPot: PotInstance = {
           id: generatePotId(),
           typeId: potType.id,
@@ -391,6 +394,7 @@ export const useGameStore = create<GameStore>()(
         if (!get().spendMoney(potType.cost)) return;
         if (state.plantHobby.pots.some(p => p.slot === slot)) return;
         
+        audio.play('buy');
         const newPot: PotInstance = {
           id: generatePotId(),
           typeId: potTypeId,
@@ -413,6 +417,7 @@ export const useGameStore = create<GameStore>()(
         if (state.plantHobby.table.id === tableId) return; // Already have it
         if (!get().spendMoney(tableType.cost)) return;
         
+        audio.play('buy');
         // When upgrading table, keep existing pots that fit
         const newPots = state.plantHobby.pots.filter(p => p.slot < tableType.potSlots);
         
@@ -432,6 +437,7 @@ export const useGameStore = create<GameStore>()(
         if (state.plantHobby.light.id === lightId) return; // Already have it
         if (!get().spendMoney(lightType.cost)) return;
         
+        audio.play('buy');
         // Update light coverage for existing plants
         const newPlants: Record<string, PlantInstance> = {};
         for (const [id, plant] of Object.entries(state.plantHobby.plants)) {
@@ -512,6 +518,7 @@ export const useGameStore = create<GameStore>()(
         
         if (!harvested) return;
         
+        audio.play('harvest');
         // Remove plant from plants object
         const { [plantId]: _, ...remainingPlants } = plantHobby.plants;
         
@@ -537,6 +544,7 @@ export const useGameStore = create<GameStore>()(
         
         const price = Math.round(plantType.sellPrice * item.quantity * item.freshness * 10) / 10;
         
+        audio.play('sell');
         set({
           economy: { ...state.economy, money: state.economy.money + price },
           plantHobby: {
@@ -600,6 +608,7 @@ export const useGameStore = create<GameStore>()(
         // Wholesale: 50% of base price
         const price = Math.round(plantType.sellPrice * item.quantity * 0.5 * 10) / 10;
         
+        audio.play('sell');
         set({
           economy: { ...state.economy, money: state.economy.money + price },
           plantHobby: {
@@ -632,6 +641,7 @@ export const useGameStore = create<GameStore>()(
         // Emit compost synergy when selling at market (composting leftovers)
         emitCompostFromPlants(item.quantity, state.gameDay);
         
+        audio.play('sell');
         set({
           economy: { ...state.economy, money: state.economy.money + price },
           market: { ...state.market, lastMarketDay: currentDay },
@@ -652,6 +662,7 @@ export const useGameStore = create<GameStore>()(
         if (!mushroomType) return;
         if (!get().spendMoney(mushroomType.spawnCost * qty)) return;
         
+        audio.play('buy');
         set({
           mushroomHobby: {
             ...state.mushroomHobby,
@@ -669,6 +680,7 @@ export const useGameStore = create<GameStore>()(
         if (!get().spendMoney(bagType.cost)) return;
         if (state.mushroomHobby.growBags.some(b => b.slot === slot)) return;
         
+        audio.play('buy');
         const newBag: GrowBagInstance = {
           id: generateBagId(),
           typeId: bagType.id,
@@ -691,6 +703,7 @@ export const useGameStore = create<GameStore>()(
         if (state.mushroomHobby.equipment.includes(equipmentId)) return;
         if (!get().spendMoney(equipment.cost)) return;
         
+        audio.play('buy');
         // Apply equipment bonuses to environment
         const newEnv = { ...state.mushroomHobby.environment };
         if (equipment.bonus.humidity) {
@@ -757,6 +770,7 @@ export const useGameStore = create<GameStore>()(
         const harvested = calculateMushroomHarvest(mushroom);
         if (!harvested) return;
         
+        audio.play('harvest');
         // Emit spent substrate synergy for plants
         emitSubstrateFromMushrooms(harvested.quantity, state.gameDay);
         
@@ -785,6 +799,7 @@ export const useGameStore = create<GameStore>()(
         
         const price = Math.round(mushroomType.sellPrice * item.quantity * item.freshness * 10) / 10;
         
+        audio.play('sell');
         set({
           economy: { ...state.economy, money: state.economy.money + price },
           mushroomHobby: {

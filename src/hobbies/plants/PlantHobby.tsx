@@ -14,6 +14,7 @@ import { useGameStore, selectYieldMultiplier } from '../../store/gameStore';
 import { GrowCanvas } from './GrowCanvas';
 import { isMarketDay } from '../../market/types';
 import { PlantShop, HarvestManager, PlantMenu } from './components';
+import { audio } from '../../engine/audio';
 
 interface PlantHobbyProps {
   onBack: () => void;
@@ -106,7 +107,7 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
         {(['grow', 'harvest', 'shop'] as const).map(t => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => { audio.play('click'); setTab(t); }}
             style={{
               flex: 1,
               padding: '10px',
