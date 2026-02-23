@@ -8,7 +8,7 @@
  *   - PlantMenu (seed selection modal)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useTheme } from '../../theme';
 import { useGameStore, selectYieldMultiplier } from '../../store/gameStore';
 import { GrowCanvas } from './GrowCanvas';
@@ -51,6 +51,32 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [showPlantMenu, setShowPlantMenu] = useState(false);
   const [tab, setTab] = useState<'grow' | 'harvest' | 'shop'>('grow');
+  
+  // Responsive canvas sizing
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 400, height: 200 });
+  
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    
+    const updateSize = () => {
+      const containerWidth = container.clientWidth;
+      // Maintain 2:1 aspect ratio, with min/max bounds
+      const width = Math.max(280, Math.min(containerWidth, 600));
+      const height = Math.round(width * 0.5); // 2:1 aspect ratio
+      setCanvasSize({ width, height });
+    };
+    
+    // Initial size
+    updateSize();
+    
+    // Watch for resize
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(container);
+    
+    return () => resizeObserver.disconnect();
+  }, []);
 
   const { table, pots, plants, seeds, harvest } = plantHobby;
   const kitchenFull = kitchen.storage.length >= kitchen.capacity;
@@ -102,7 +128,7 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
         <span style={{ color: theme.textMuted, fontSize: 12 }}>${money.toFixed(0)}</span>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - 44px min height for touch targets */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${theme.border}` }}>
         {(['grow', 'harvest', 'shop'] as const).map(t => (
           <button
@@ -110,7 +136,8 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
             onClick={() => { audio.play('click'); setTab(t); }}
             style={{
               flex: 1,
-              padding: '10px',
+              padding: '12px 8px',
+              minHeight: 44,
               background: 'none',
               border: 'none',
               borderBottom: tab === t ? `2px solid ${theme.accent}` : '2px solid transparent',
@@ -118,6 +145,7 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
               cursor: 'pointer',
               fontWeight: tab === t ? 600 : 400,
               textTransform: 'capitalize',
+              fontSize: 14,
             }}
           >
             {t} {t === 'harvest' && harvest.length > 0 && `(${harvest.length})`}
@@ -126,16 +154,21 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
       </div>
 
       {/* Content */}
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: 12 }}>
         {tab === 'grow' && (
-          <div style={{ 
-            background: theme.bgAlt, 
-            borderRadius: theme.radiusMd,
-            padding: 12,
-          }}>
+          <div 
+            ref={canvasContainerRef}
+            style={{ 
+              background: theme.bgAlt, 
+              borderRadius: theme.radiusMd,
+              padding: 8,
+              width: '100%',
+              boxSizing: 'border-box',
+            }}
+          >
             <GrowCanvas
-              width={400}
-              height={200}
+              width={canvasSize.width}
+              height={canvasSize.height}
               onSlotClick={handleSlotClick}
             />
           </div>

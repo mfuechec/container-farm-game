@@ -159,6 +159,96 @@ const meta: Meta = {
 
 export default meta;
 
+// =============================================================================
+// MOBILE VIEWPORT STORIES
+// =============================================================================
+
+/**
+ * Mobile view - iPhone SE (375px)
+ * Tests canvas scaling and layout at smallest supported viewport.
+ * Canvas should fit without horizontal scrolling.
+ */
+export const MobileIPhoneSE: StoryObj = {
+  parameters: {
+    viewport: { defaultViewport: 'iPhoneSE' },
+  },
+  decorators: [withStoreState({
+    tableSlots: 4,
+    lightCoverage: 3,
+    pots: [
+      { slot: 0, stage: 'growing', progress: 0.5 },
+      { slot: 1, stage: 'harvestable', progress: 1 },
+      { slot: 2, stage: 'sprout', progress: 0.3 },
+    ],
+  })],
+  render: () => (
+    <div style={{ width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
+      <GrowCanvasWrapper showControls={false} />
+      <p style={{ fontSize: 12, color: '#666', marginTop: 8, padding: '0 8px' }}>
+        📱 iPhone SE (375px) - Canvas should fit without scrolling
+      </p>
+    </div>
+  ),
+};
+
+/**
+ * Mobile view - iPhone 14 (390px)
+ * Slightly larger mobile viewport.
+ */
+export const MobileIPhone14: StoryObj = {
+  parameters: {
+    viewport: { defaultViewport: 'iPhone14' },
+  },
+  decorators: [withStoreState({
+    tableSlots: 4,
+    lightCoverage: 4,
+    pots: [
+      { slot: 0, stage: 'harvestable', progress: 1 },
+      { slot: 1, stage: 'growing', progress: 0.7 },
+      { slot: 2, stage: 'harvestable', progress: 1 },
+      { slot: 3, stage: 'seed', progress: 0.1 },
+    ],
+  })],
+  render: () => (
+    <div style={{ width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
+      <GrowCanvasWrapper showControls={false} />
+      <p style={{ fontSize: 12, color: '#666', marginTop: 8, padding: '0 8px' }}>
+        📱 iPhone 14 (390px) - Full table with all growth stages
+      </p>
+    </div>
+  ),
+};
+
+/**
+ * Tablet view - iPad (768px)
+ * Tests intermediate viewport between mobile and desktop.
+ */
+export const TabletIPad: StoryObj = {
+  parameters: {
+    viewport: { defaultViewport: 'iPad' },
+  },
+  decorators: [withStoreState({
+    tableSlots: 6,
+    lightCoverage: 4,
+    pots: [
+      { slot: 0, stage: 'harvestable', progress: 1 },
+      { slot: 1, stage: 'growing', progress: 0.8 },
+      { slot: 2, stage: 'growing', progress: 0.6 },
+      { slot: 3, stage: 'sprout', progress: 0.3 },
+      { slot: 4 },  // Empty pot
+      { slot: 5, stage: 'seed', progress: 0.1 },
+    ],
+  })],
+  render: () => (
+    <div style={{ width: '100%', maxWidth: '100vw' }}>
+      <GrowCanvasWrapper />
+      <p style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+        📱 iPad (768px) - Larger table with 6 slots
+      </p>
+    </div>
+  ),
+};
+
 /**
  * Empty table with no pots - shows the table and light fixture.
  * Click slots to see interaction areas.

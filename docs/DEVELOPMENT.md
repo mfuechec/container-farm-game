@@ -1,5 +1,47 @@
 # Development Guide
 
+## Mobile-First Rules
+
+**All UI must work at 375px width (iPhone SE).** Test on mobile before declaring done.
+
+### Responsive Guidelines
+
+1. **No hardcoded pixel widths for containers**
+   - ❌ `width: 800px`
+   - ✅ `width: 100%` or `max-width: 800px`
+
+2. **Use % or viewport units for responsive elements**
+   - ❌ `margin-left: 200px`
+   - ✅ `margin-left: 5%` or `padding: clamp(8px, 2vw, 24px)`
+
+3. **Canvas/PixiJS components must accept dynamic dimensions**
+   - Pass `width` and `height` as props, not hardcoded values
+   - Use `ResizeObserver` or parent container size
+   - Example: `<GrowCanvas width={containerWidth} height={200} />`
+
+4. **Test at 375px before declaring done**
+   - Storybook: Use viewport addon (iPhone SE is default)
+   - Smoke test: `npm run smoke` tests both desktop and mobile
+   - Manual: Chrome DevTools → Toggle device toolbar → iPhone SE
+
+### Storybook Viewports
+
+The project uses custom mobile viewports (configured in `.storybook/preview.ts`):
+- **iPhone SE (375px)** - Default, smallest supported
+- **iPhone 14 (390px)** - Common modern phone
+- **iPad (768px)** - Tablet breakpoint
+- **Desktop (1280px)** - Full desktop
+
+Stories should include mobile variants for layout-sensitive components.
+
+### Smoke Test
+
+The smoke test (`npm run smoke`) runs at both viewport sizes:
+- Desktop (1280px): Core functionality
+- Mobile (375px): Same tests + overflow/layout checks
+
+---
+
 ## Quick Start
 
 ```bash

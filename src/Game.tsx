@@ -157,16 +157,29 @@ export function Game() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '12px 20px',
+        padding: '10px 12px',
         background: theme.surface,
         borderBottom: `1px solid ${theme.border}`,
+        gap: 8,
+        flexWrap: 'wrap',
       }}>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: theme.accent }}>
-          🌱 Side Hustle Simulator
+        <h1 style={{ 
+          margin: 0, 
+          fontSize: 16, 
+          fontWeight: 700, 
+          color: theme.accent,
+          whiteSpace: 'nowrap',
+        }}>
+          🌱 Side Hustle Sim
         </h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => skipTime(1)} style={devBtnStyle(theme)}>+1 Day</button>
-          <button onClick={() => skipTime(7)} style={devBtnStyle(theme)}>+1 Week</button>
+        <div style={{ 
+          display: 'flex', 
+          gap: 6, 
+          alignItems: 'center',
+          flexShrink: 0,
+        }}>
+          <button onClick={() => skipTime(1)} style={devBtnStyle(theme)}>+1D</button>
+          <button onClick={() => skipTime(7)} style={devBtnStyle(theme)}>+1W</button>
           <button onClick={toggleMute} style={devBtnStyle(theme)} title={isMuted ? 'Unmute' : 'Mute'}>
             {isMuted ? '🔇' : '🔊'}
           </button>
@@ -177,7 +190,7 @@ export function Game() {
       </header>
 
       {/* Main content */}
-      <main style={{ padding: 20, maxWidth: 600, margin: '0 auto' }}>
+      <main style={{ padding: '16px 12px', maxWidth: 600, margin: '0 auto' }}>
         {content}
       </main>
     </div>

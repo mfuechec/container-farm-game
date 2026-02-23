@@ -97,9 +97,27 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
   const plantHobby = useGameStore(s => s.plantHobby);
   const { table, light, pots, plants } = plantHobby;
 
-  // Initialize PixiJS
+  // Initialize PixiJS - recreate when dimensions change
   useEffect(() => {
-    if (!canvasRef.current || appRef.current) return;
+    if (!canvasRef.current) return;
+    
+    // Clean up existing app if dimensions changed
+    if (appRef.current) {
+      try {
+        // Stop the ticker first to prevent any callbacks during destruction
+        appRef.current.ticker.stop();
+        appRef.current.destroy(true, { children: true });
+      } catch (e) {
+        // PixiJS destroy can throw if resize observer is active
+        console.warn('PixiJS cleanup warning:', e);
+      }
+      appRef.current = null;
+      sceneRef.current = null;
+      // Clear the container
+      if (canvasRef.current) {
+        canvasRef.current.innerHTML = '';
+      }
+    }
 
     const app = new Application();
     
@@ -293,6 +311,10 @@ function createScene(
 function drawTable(g: Graphics, width: number, height: number) {
   const tableY = height - 35;
   const tableHeight = 35;
+  
+  // Proportional leg positioning (5% from edges, min 12px)
+  const legInset = Math.max(12, width * 0.05);
+  const legWidth = Math.max(10, Math.min(14, width * 0.035));
 
   // Table top
   g.rect(0, tableY, width, 20);
@@ -308,10 +330,10 @@ function drawTable(g: Graphics, width: number, height: number) {
   g.rect(0, tableY + 18, width, 8);
   g.fill(COLORS.woodDark);
 
-  // Table legs
-  g.rect(20, tableY + 20, 12, 15);
+  // Table legs - proportionally positioned
+  g.rect(legInset, tableY + 20, legWidth, 15);
   g.fill(COLORS.wood);
-  g.rect(width - 32, tableY + 20, 12, 15);
+  g.rect(width - legInset - legWidth, tableY + 20, legWidth, 15);
   g.fill(COLORS.wood);
 }
 
