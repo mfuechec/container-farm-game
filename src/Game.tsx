@@ -13,6 +13,7 @@ import { useShallow } from 'zustand/react/shallow';
 // Components
 import { ApartmentView } from './apartment/ApartmentView';
 import { PlantHobby } from './hobbies/plants/PlantHobby';
+import { MushroomHobby } from './hobbies/mushrooms/MushroomHobby';
 import { HobbySlot } from './apartment/types';
 import { calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier } from './kitchen/types';
 import { getRentForWeek } from './economy/types';
@@ -108,6 +109,14 @@ export function Game() {
       );
       break;
 
+    case 'hobby-mushrooms':
+      content = (
+        <MushroomHobby
+          onBack={handleBack}
+        />
+      );
+      break;
+
     case 'kitchen':
       content = (
         <KitchenView
@@ -185,7 +194,7 @@ function HobbySelector({
 }) {
   const hobbies = [
     { id: 'plants' as const, emoji: '🌱', name: 'Container Farm', desc: 'Grow herbs and vegetables' },
-    { id: 'mushrooms' as const, emoji: '🍄', name: 'Mushroom Farm', desc: 'Coming soon...', disabled: true },
+    { id: 'mushrooms' as const, emoji: '🍄', name: 'Mushroom Farm', desc: 'Fast-growing gourmet mushrooms' },
   ];
 
   return (
@@ -215,17 +224,16 @@ function HobbySelector({
         {hobbies.map(h => (
           <div
             key={h.id}
-            onClick={() => !h.disabled && onSelect(h.id)}
+            onClick={() => onSelect(h.id)}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 16,
               padding: 16,
-              background: h.disabled ? theme.bgAlt : theme.surface,
-              border: `2px solid ${h.disabled ? theme.border : theme.accent}`,
+              background: theme.surface,
+              border: `2px solid ${theme.accent}`,
               borderRadius: theme.radiusMd,
-              cursor: h.disabled ? 'not-allowed' : 'pointer',
-              opacity: h.disabled ? 0.5 : 1,
+              cursor: 'pointer',
             }}
           >
             <span style={{ fontSize: 32 }}>{h.emoji}</span>
