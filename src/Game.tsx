@@ -159,7 +159,7 @@ export function Game() {
         <HousingPreview
           tier={selectedHousing}
           currentTier={apartment.housing}
-          currentDeposit={apartment.securityDeposit}
+          currentDeposit={apartment.securityDeposit ?? 0}
           currentHobbies={apartment.hobbySlots.map(s => s.hobby)}
           money={economy.money}
           onMove={() => {

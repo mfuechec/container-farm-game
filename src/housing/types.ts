@@ -95,15 +95,17 @@ export function canAffordUpgrade(
 export function calculateMoveTransaction(
   fromTier: HousingTier,
   toTier: HousingTier,
-  currentDeposit: number
+  currentDeposit: number = 0
 ): MoveTransaction {
+  // Ensure currentDeposit is a valid number
+  const safeCurrentDeposit = currentDeposit ?? 0;
   const newDeposit = calculateDeposit(toTier);
   const isUpgrade = toTier.hobbySlots > fromTier.hobbySlots;
   
   return {
-    depositReturned: currentDeposit,
+    depositReturned: safeCurrentDeposit,
     depositCharged: newDeposit,
-    netCost: newDeposit - currentDeposit,
+    netCost: newDeposit - safeCurrentDeposit,
     isUpgrade,
   };
 }
