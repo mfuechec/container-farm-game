@@ -21,6 +21,8 @@ import {
 } from '../housing/types';
 import { KitchenState, INITIAL_KITCHEN, FoodItem } from '../kitchen/types';
 import { EconomyState, INITIAL_ECONOMY } from '../economy/types';
+import { PantryState, Meal, INGREDIENTS, STAPLE_IDS, PantryItem } from '../engine/pantryEngine';
+import { INITIAL_PANTRY, PantrySlice } from '../kitchen/pantryStore';
 import { MarketState, MarketRentalTier, INITIAL_MARKET, isMarketDay, MARKET_RENTALS } from '../market/types';
 import {
   PlantInstance, HarvestedPlant,
@@ -98,6 +100,11 @@ interface GameState {
   mushroomHobby: MushroomHobbyState;
   market: MarketState;
   
+  // Pantry (new meal system)
+  pantry: PantryState;
+  todaysMeal: Meal | null;
+  lastMealDay: number;
+  
   // Time
   gameDay: number;
   lastTick: number;
@@ -121,6 +128,11 @@ interface GameActions {
   
   // Kitchen
   storeInKitchen: (item: FoodItem) => boolean;
+  
+  // Pantry
+  addToPantry: (ingredientId: string, quantity: number, source: 'grown' | 'bought') => void;
+  buyStaple: (ingredientId: string) => boolean;
+  processDailyMeal: () => void;
   
   // Apartment
   startHobby: (slot: number, hobby: 'plants' | 'mushrooms') => void;
@@ -172,6 +184,9 @@ export const useGameStore = create<GameStore>()(
       plantHobby: INITIAL_PLANT_STATE,
       mushroomHobby: INITIAL_MUSHROOM_STATE,
       market: INITIAL_MARKET,
+      pantry: INITIAL_PANTRY,
+      todaysMeal: null,
+      lastMealDay: 0,
       gameDay: 1,
       lastTick: Date.now(),
       gameStartTime: Date.now(),
@@ -225,6 +240,163 @@ export const useGameStore = create<GameStore>()(
           }
         });
         return true;
+      },
+      
+      // Pantry actions
+      addToPantry: (ingredientId, quantity, source) => {
+        const state = get();
+        const gameDay = Math.floor(state.gameDay);
+        
+        const existingIdx = state.pantry.items.findIndex(
+          i => i.ingredientId === ingredientId && i.source === source
+        );
+        
+        let newItems: PantryItem[];
+        if (existingIdx >= 0) {
+          newItems = state.pantry.items.map((item, idx) =>
+            idx === existingIdx
+              ? { ...item, quantity: item.quantity + quantity, harvestedAt: gameDay }
+              : item
+          );
+        } else {
+          newItems = [...state.pantry.items, {
+            ingredientId,
+            quantity,
+            harvestedAt: gameDay,
+            source,
+          }];
+        }
+        
+        set({ pantry: { ...state.pantry, items: newItems } });
+      },
+      
+      buyStaple: (ingredientId) => {
+        const ingredient = INGREDIENTS[ingredientId];
+        if (!ingredient) return false;
+        if (!STAPLE_IDS.includes(ingredientId)) return false;
+        
+        const state = get();
+        if (!state.spendMoney(ingredient.basePrice)) return false;
+        
+        state.addToPantry(ingredientId, 1, 'bought');
+        audio.play('buy');
+        return true;
+      },
+      
+      processDailyMeal: () => {
+        const state = get();
+        const currentDay = Math.floor(state.gameDay);
+        
+        if (currentDay <= state.lastMealDay) return;
+        
+        const { pantry } = state;
+        const available = pantry.items.filter(i => i.quantity > 0);
+        
+        // Need at least a base (staple/protein)
+        const bases = available.filter(i => {
+          const ing = INGREDIENTS[i.ingredientId];
+          return ing?.category === 'staple' || ing?.category === 'protein';
+        });
+        
+        if (bases.length === 0) {
+          set({ lastMealDay: currentDay, todaysMeal: null });
+          return;
+        }
+        
+        // Pick a base (variety)
+        const recentBases = pantry.mealHistory.slice(-3).flatMap(m => m.ingredients);
+        const freshBase = bases.find(b => !recentBases.includes(b.ingredientId)) || bases[0];
+        
+        // Pick toppings
+        const toppings = available
+          .filter(i => {
+            const ing = INGREDIENTS[i.ingredientId];
+            return ing?.category !== 'staple' && i.ingredientId !== freshBase.ingredientId;
+          })
+          .sort((a, b) => {
+            // Prefer soon-to-spoil, then homegrown
+            const ingA = INGREDIENTS[a.ingredientId];
+            const ingB = INGREDIENTS[b.ingredientId];
+            const freshA = ingA?.shelfLife === Infinity ? 1 : Math.max(0, 1 - (currentDay - a.harvestedAt) / (ingA?.shelfLife || 7));
+            const freshB = ingB?.shelfLife === Infinity ? 1 : Math.max(0, 1 - (currentDay - b.harvestedAt) / (ingB?.shelfLife || 7));
+            if (freshA !== freshB) return freshA - freshB;
+            return a.source === 'grown' ? -1 : 1;
+          });
+        
+        const selected = [freshBase.ingredientId];
+        for (let i = 0; i < Math.min(2, toppings.length); i++) {
+          selected.push(toppings[i].ingredientId);
+        }
+        
+        // Calculate freshness and generate meal
+        let totalFreshness = 0;
+        for (const id of selected) {
+          const item = pantry.items.find(i => i.ingredientId === id);
+          const ing = INGREDIENTS[id];
+          if (item && ing) {
+            const f = ing.shelfLife === Infinity ? 1 : Math.max(0, 1 - (currentDay - item.harvestedAt) / ing.shelfLife);
+            totalFreshness += f;
+          }
+        }
+        const avgFreshness = totalFreshness / selected.length;
+        
+        // Generate name
+        const ingredients = selected.map(id => INGREDIENTS[id]).filter(Boolean);
+        const base = ingredients.find(i => i.category === 'staple' || i.category === 'protein');
+        const tops = ingredients.filter(i => i.category !== 'staple');
+        let adj = avgFreshness >= 0.8 ? 'Fresh ' : avgFreshness < 0.5 ? 'Day-old ' : '';
+        const topNames = tops.slice(0, 2).map(t => t.name.split(' ')[0]).join(' ');
+        const mealName = `${adj}${topNames ? topNames + ' ' : ''}${base?.name || 'Bowl'}`;
+        
+        // Check if new
+        const sorted = [...selected].sort().join(',');
+        const isNew = !pantry.mealHistory.slice(-7).some(m => [...m.ingredients].sort().join(',') === sorted);
+        
+        // Calculate satisfaction
+        let sat = 2;
+        let hasHomegrown = false, hasFresh = false, hasWilted = false;
+        for (const id of selected) {
+          const item = pantry.items.find(i => i.ingredientId === id);
+          const ing = INGREDIENTS[id];
+          if (item && ing) {
+            const f = ing.shelfLife === Infinity ? 1 : Math.max(0, 1 - (currentDay - item.harvestedAt) / ing.shelfLife);
+            if (item.source === 'grown') hasHomegrown = true;
+            if (f >= 0.8) hasFresh = true;
+            if (f < 0.5) hasWilted = true;
+          }
+        }
+        if (hasFresh) sat++;
+        if (hasHomegrown) sat++;
+        if (isNew) sat++;
+        if (hasWilted) sat--;
+        const lastMeal = pantry.mealHistory[pantry.mealHistory.length - 1];
+        if (lastMeal && [...lastMeal.ingredients].sort().join(',') === sorted) sat--;
+        sat = Math.max(1, Math.min(5, sat));
+        
+        const meal: Meal = {
+          id: `meal-${currentDay}-${Date.now()}`,
+          name: mealName,
+          ingredients: selected,
+          cookedAt: currentDay,
+          satisfaction: sat,
+          isNew,
+        };
+        
+        // Consume ingredients
+        const newItems = pantry.items
+          .map(item => selected.includes(item.ingredientId) ? { ...item, quantity: item.quantity - 1 } : item)
+          .filter(item => item.quantity > 0);
+        
+        set({
+          lastMealDay: currentDay,
+          todaysMeal: meal,
+          pantry: {
+            ...pantry,
+            items: newItems,
+            mealHistory: [...pantry.mealHistory.slice(-29), meal],
+            totalMealsCooked: pantry.totalMealsCooked + 1,
+          },
+        });
       },
       
       // Apartment
@@ -460,6 +632,9 @@ export const useGameStore = create<GameStore>()(
             harvest: newMushroomHarvest,
           },
         });
+        
+        // Process daily meal after state update
+        get().processDailyMeal();
       },
       
       // Plant Hobby actions
@@ -969,6 +1144,9 @@ export const useGameStore = create<GameStore>()(
         plantHobby: state.plantHobby,
         mushroomHobby: state.mushroomHobby,
         market: state.market,
+        pantry: state.pantry,
+        todaysMeal: state.todaysMeal,
+        lastMealDay: state.lastMealDay,
         gameDay: state.gameDay,
         lastTick: state.lastTick,
         gameStartTime: state.gameStartTime,
@@ -1008,6 +1186,13 @@ export const useGameStore = create<GameStore>()(
             ...persisted.kitchen,
             capacity: INITIAL_KITCHEN.capacity,
           },
+          // Ensure pantry state exists (handles old saves)
+          pantry: {
+            ...INITIAL_PANTRY,
+            ...persisted.pantry,
+          },
+          todaysMeal: persisted.todaysMeal ?? null,
+          lastMealDay: persisted.lastMealDay ?? 0,
         };
       },
     }

@@ -18,6 +18,7 @@ import { MushroomHobby } from './hobbies/mushrooms/MushroomHobby';
 import { CityMap, HousingPreview, HobbySelectModal, HousingTier } from './housing';
 import { HobbySlot } from './apartment/types';
 import { calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier } from './kitchen/types';
+import { PantryView } from './kitchen/PantryView';
 import { getRentForWeek } from './economy/types';
 import { getWeeklyRentalCost } from './market/types';
 import { ToastContainer, useToast } from './ui/toast';
@@ -46,7 +47,7 @@ export function Game() {
   const [pendingTier, setPendingTier] = useState<HousingTier | null>(null);
   
   // Store state - use shallow to prevent unnecessary re-renders
-  const { view, apartment, kitchen, economy, gameDay, market } = useGameStore(
+  const { view, apartment, kitchen, economy, gameDay, market, pantry, todaysMeal } = useGameStore(
     useShallow(s => ({
       view: s.view,
       apartment: s.apartment,
@@ -54,6 +55,8 @@ export function Game() {
       economy: s.economy,
       gameDay: s.gameDay,
       market: s.market,
+      pantry: s.pantry,
+      todaysMeal: s.todaysMeal,
     }))
   );
   
@@ -64,6 +67,7 @@ export function Game() {
   const skipTime = useGameStore(s => s.skipTime);
   const upgradeHousing = useGameStore(s => s.upgradeHousing);
   const downgradeHousing = useGameStore(s => s.downgradeHousing);
+  const buyStaple = useGameStore(s => s.buyStaple);
   
   // Derived values - compute from state directly
   const kitchenBonuses = useMemo(() => getActiveKitchenBonuses(kitchen.storage), [kitchen.storage]);
@@ -176,16 +180,11 @@ export function Game() {
 
     case 'kitchen':
       content = (
-        <KitchenView
-          kitchen={kitchen}
-          grocerySavings={grocerySavings}
-          weeklyExpenses={weeklyExpenses}
-          weeklyIncome={economy.weeklyIncome}
-          currentRent={currentRent}
-          groceryBase={economy.weeklyGroceryBase}
-          marketRent={marketRent}
-          currentWeek={currentWeek}
-          kitchenBonuses={kitchenBonuses}
+        <PantryView
+          pantry={pantry}
+          gameDay={Math.floor(gameDay)}
+          todaysMeal={todaysMeal}
+          onBuyStaple={buyStaple}
           onBack={handleBack}
           theme={theme}
         />
