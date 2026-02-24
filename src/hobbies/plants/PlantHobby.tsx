@@ -39,6 +39,7 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
   const plantSeed = useGameStore(s => s.plantSeed);
   const harvestPlant = useGameStore(s => s.harvestPlant);
   const storeHarvest = useGameStore(s => s.storeHarvest);
+  const storePlantHarvestInPantry = useGameStore(s => s.storePlantHarvestInPantry);
   const sellWholesale = useGameStore(s => s.sellWholesale);
   const sellAtMarket = useGameStore(s => s.sellAtMarket);
   const setMarketRental = useGameStore(s => s.setMarketRental);
@@ -189,6 +190,7 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
             lastMarketDay={market.lastMarketDay}
             kitchenFull={kitchenFull}
             onStoreHarvest={storeHarvest}
+            onStoreToPantry={storePlantHarvestInPantry}
             onSellWholesale={sellWholesale}
             onSellAtMarket={sellAtMarket}
             theme={theme}

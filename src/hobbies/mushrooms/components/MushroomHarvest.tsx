@@ -10,6 +10,7 @@ interface MushroomHarvestProps {
   kitchenFull: boolean;
   onSell: (harvestId: string) => void;
   onStore: (harvestId: string) => boolean;
+  onStoreToPantry: (harvestId: string) => boolean;
   theme: any;
 }
 
@@ -18,6 +19,7 @@ export function MushroomHarvest({
   kitchenFull,
   onSell,
   onStore,
+  onStoreToPantry,
   theme,
 }: MushroomHarvestProps) {
   if (harvest.length === 0) {
@@ -91,20 +93,19 @@ export function MushroomHarvest({
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: 6 }}>
               <button
-                onClick={() => onStore(item.id)}
-                disabled={kitchenFull}
-                title={kitchenFull ? 'Kitchen full' : 'Store in kitchen'}
+                onClick={() => onStoreToPantry(item.id)}
+                title="Store in Pantry (for cooking)"
                 style={{
                   padding: '6px 10px',
-                  background: kitchenFull ? theme.bgAlt : theme.surface,
-                  color: kitchenFull ? theme.textMuted : theme.text,
-                  border: `1px solid ${theme.border}`,
+                  background: theme.surface,
+                  color: theme.accent,
+                  border: `1px solid ${theme.accent}`,
                   borderRadius: theme.radiusSm,
-                  cursor: kitchenFull ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer',
                   fontSize: 11,
                 }}
               >
-                🏠 Store
+                🍳 Cook
               </button>
               <button
                 onClick={() => onSell(item.id)}

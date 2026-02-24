@@ -18,6 +18,7 @@ export interface HarvestManagerProps {
   lastMarketDay: number;
   kitchenFull: boolean;
   onStoreHarvest: (harvestId: string) => void;
+  onStoreToPantry: (harvestId: string) => void;
   onSellWholesale: (harvestId: string) => void;
   onSellAtMarket: (harvestId: string) => void;
   theme: any;
@@ -30,6 +31,7 @@ export function HarvestManager({
   lastMarketDay,
   kitchenFull,
   onStoreHarvest,
+  onStoreToPantry,
   onSellWholesale,
   onSellAtMarket,
   theme,
@@ -94,21 +96,21 @@ export function HarvestManager({
                   </div>
                 </div>
                 
-                {/* Keep button */}
+                {/* Store to Pantry (for cooking) */}
                 <button
-                  onClick={() => onStoreHarvest(item.id)}
-                  disabled={kitchenFull}
+                  onClick={() => onStoreToPantry(item.id)}
                   style={{
                     padding: '6px 10px',
-                    background: kitchenFull ? theme.bgAlt : theme.surface,
-                    border: `1px solid ${kitchenFull ? theme.border : theme.accent}`,
+                    background: theme.surface,
+                    border: `1px solid ${theme.accent}`,
                     borderRadius: theme.radiusSm,
-                    color: kitchenFull ? theme.textMuted : theme.accent,
-                    cursor: kitchenFull ? 'not-allowed' : 'pointer',
+                    color: theme.accent,
+                    cursor: 'pointer',
                     fontSize: 11,
                   }}
+                  title="Store in Pantry (for cooking)"
                 >
-                  🏠
+                  🍳
                 </button>
                 
                 {/* Wholesale button (always available) */}

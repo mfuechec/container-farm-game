@@ -93,6 +93,15 @@ export const INGREDIENTS: Record<string, Ingredient> = {
     basePrice: 2,
     flavorTags: ['aromatic', 'earthy', 'savory'],
   },
+  parsley: {
+    id: 'parsley',
+    name: 'Parsley',
+    category: 'herb',
+    icon: '🪴',
+    shelfLife: 7,
+    basePrice: 2,
+    flavorTags: ['fresh', 'mild', 'versatile'],
+  },
 
   // Mushrooms (from mushroom hobby)
   oyster: {
@@ -118,6 +127,16 @@ export const INGREDIENTS: Record<string, Ingredient> = {
     name: "Lion's Mane",
     category: 'mushroom',
     icon: '🍄',
+    shelfLife: 5,
+    basePrice: 6,
+    flavorTags: ['seafood', 'delicate', 'umami'],
+  },
+  // Alias for hobby system compatibility
+  lions_mane: {
+    id: 'lions_mane',
+    name: "Lion's Mane",
+    category: 'mushroom',
+    icon: '🦁',
     shelfLife: 5,
     basePrice: 6,
     flavorTags: ['seafood', 'delicate', 'umami'],

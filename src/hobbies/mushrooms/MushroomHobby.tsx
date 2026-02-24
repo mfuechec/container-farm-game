@@ -36,6 +36,7 @@ export function MushroomHobby({ onBack }: MushroomHobbyProps) {
   const harvestMushroom = useGameStore(s => s.harvestMushroom);
   const sellMushroomHarvest = useGameStore(s => s.sellMushroomHarvest);
   const storeMushroomHarvest = useGameStore(s => s.storeMushroomHarvest);
+  const storeMushroomHarvestInPantry = useGameStore(s => s.storeMushroomHarvestInPantry);
   
   // Local UI state
   const [selectedBag, setSelectedBag] = useState<string | null>(null);
@@ -167,6 +168,7 @@ export function MushroomHobby({ onBack }: MushroomHobbyProps) {
             kitchenFull={kitchenFull}
             onSell={sellMushroomHarvest}
             onStore={storeMushroomHarvest}
+            onStoreToPantry={storeMushroomHarvestInPantry}
             theme={theme}
           />
         )}

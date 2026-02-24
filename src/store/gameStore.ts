@@ -133,6 +133,8 @@ interface GameActions {
   addToPantry: (ingredientId: string, quantity: number, source: 'grown' | 'bought') => void;
   buyStaple: (ingredientId: string) => boolean;
   processDailyMeal: () => void;
+  storePlantHarvestInPantry: (harvestId: string) => boolean;
+  storeMushroomHarvestInPantry: (harvestId: string) => boolean;
   
   // Apartment
   startHobby: (slot: number, hobby: 'plants' | 'mushrooms') => void;
@@ -397,6 +399,54 @@ export const useGameStore = create<GameStore>()(
             totalMealsCooked: pantry.totalMealsCooked + 1,
           },
         });
+      },
+      
+      storePlantHarvestInPantry: (harvestId) => {
+        const state = get();
+        const item = state.plantHobby.harvest.find(h => h.id === harvestId);
+        if (!item) return false;
+        
+        // Map plant type ID to ingredient ID (they match in our case)
+        const ingredientId = item.typeId;
+        if (!INGREDIENTS[ingredientId]) return false;
+        
+        // Add to pantry
+        state.addToPantry(ingredientId, Math.floor(item.quantity), 'grown');
+        
+        // Remove from harvest
+        set({
+          plantHobby: {
+            ...state.plantHobby,
+            harvest: state.plantHobby.harvest.filter(h => h.id !== harvestId),
+          }
+        });
+        
+        audio.play('click');
+        return true;
+      },
+      
+      storeMushroomHarvestInPantry: (harvestId) => {
+        const state = get();
+        const item = state.mushroomHobby.harvest.find(h => h.id === harvestId);
+        if (!item) return false;
+        
+        // Map mushroom type ID to ingredient ID
+        const ingredientId = item.typeId;
+        if (!INGREDIENTS[ingredientId]) return false;
+        
+        // Add to pantry (mushroom quantity is in oz, convert to units)
+        state.addToPantry(ingredientId, Math.floor(item.quantity), 'grown');
+        
+        // Remove from harvest
+        set({
+          mushroomHobby: {
+            ...state.mushroomHobby,
+            harvest: state.mushroomHobby.harvest.filter(h => h.id !== harvestId),
+          }
+        });
+        
+        audio.play('click');
+        return true;
       },
       
       // Apartment
