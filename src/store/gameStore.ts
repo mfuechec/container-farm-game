@@ -15,7 +15,10 @@ import { engine, MS_PER_GAME_DAY, TickInput } from '../engine';
 import { audio } from '../engine/audio';
 
 // Types
-import { ApartmentState, INITIAL_APARTMENT } from '../apartment/types';
+import { ApartmentState, INITIAL_APARTMENT, HobbySlot, HOUSING_TIERS } from '../apartment/types';
+import {
+  HousingTier, getHousingTier, calculateDeposit, calculateMoveTransaction,
+} from '../housing/types';
 import { KitchenState, INITIAL_KITCHEN, FoodItem } from '../kitchen/types';
 import { EconomyState, INITIAL_ECONOMY } from '../economy/types';
 import { MarketState, MarketRentalTier, INITIAL_MARKET, isMarketDay, MARKET_RENTALS } from '../market/types';
@@ -102,7 +105,7 @@ interface GameState {
   lastRentPaid: number;
   
   // UI
-  view: 'apartment' | 'kitchen' | 'hobby-plants' | 'hobby-mushrooms' | 'hobby-select';
+  view: 'apartment' | 'kitchen' | 'hobby-plants' | 'hobby-mushrooms' | 'hobby-select' | 'housing';
   selectedSlot: number;
 }
 
@@ -121,6 +124,10 @@ interface GameActions {
   
   // Apartment
   startHobby: (slot: number, hobby: 'plants' | 'mushrooms') => void;
+  
+  // Housing
+  upgradeHousing: (tierId: number) => boolean;
+  downgradeHousing: (tierId: number, keepHobbies: number[]) => boolean;
   
   // Time
   skipTime: (days: number) => void;
@@ -213,6 +220,96 @@ export const useGameStore = create<GameStore>()(
           },
           view: `hobby-${hobby}` as GameState['view'],
         });
+      },
+      
+      // Housing
+      upgradeHousing: (tierId) => {
+        const state = get();
+        const newTier = getHousingTier(tierId);
+        if (!newTier) return false;
+        
+        const currentTier = state.apartment.housing;
+        const transaction = calculateMoveTransaction(
+          currentTier,
+          newTier,
+          state.apartment.securityDeposit
+        );
+        
+        // Check if can afford
+        if (transaction.netCost > state.economy.money) return false;
+        
+        // Calculate new hobby slots
+        const currentHobbies = state.apartment.hobbySlots;
+        const newSlots: HobbySlot[] = [];
+        for (let i = 0; i < newTier.hobbySlots; i++) {
+          if (i < currentHobbies.length) {
+            newSlots.push({ ...currentHobbies[i], index: i });
+          } else {
+            newSlots.push({ index: i, hobby: null });
+          }
+        }
+        
+        // Apply transaction
+        set({
+          apartment: {
+            housing: newTier,
+            hobbySlots: newSlots,
+            securityDeposit: calculateDeposit(newTier),
+          },
+          economy: {
+            ...state.economy,
+            money: state.economy.money - transaction.netCost,
+            weeklyRent: newTier.rentPerWeek,
+          },
+          view: 'apartment',
+        });
+        
+        return true;
+      },
+      
+      downgradeHousing: (tierId, keepHobbies) => {
+        const state = get();
+        const newTier = getHousingTier(tierId);
+        if (!newTier) return false;
+        
+        const currentTier = state.apartment.housing;
+        const transaction = calculateMoveTransaction(
+          currentTier,
+          newTier,
+          state.apartment.securityDeposit
+        );
+        
+        // Build new hobby slots from kept hobbies
+        const currentHobbies = state.apartment.hobbySlots;
+        const newSlots: HobbySlot[] = [];
+        
+        // Keep selected hobbies
+        for (let i = 0; i < newTier.hobbySlots; i++) {
+          if (i < keepHobbies.length) {
+            const keepIndex = keepHobbies[i];
+            const kept = currentHobbies[keepIndex];
+            newSlots.push({ index: i, hobby: kept?.hobby || null });
+          } else {
+            newSlots.push({ index: i, hobby: null });
+          }
+        }
+        
+        // Apply transaction (negative netCost = refund)
+        set({
+          apartment: {
+            housing: newTier,
+            hobbySlots: newSlots,
+            securityDeposit: calculateDeposit(newTier),
+          },
+          economy: {
+            ...state.economy,
+            money: state.economy.money - transaction.netCost, // netCost is negative for downgrade
+            weeklyRent: newTier.rentPerWeek,
+          },
+          view: 'apartment',
+        });
+        
+        return true;
       },
       
       // Time

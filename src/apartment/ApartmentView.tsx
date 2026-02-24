@@ -14,6 +14,7 @@ interface ApartmentViewProps {
   kitchen: KitchenState;
   onSelectHobby: (slot: HobbySlot) => void;
   onSelectKitchen: () => void;
+  onMove: () => void;
   money: number;
   gameDay: number;
 }
@@ -23,6 +24,7 @@ export function ApartmentView({
   kitchen,
   onSelectHobby,
   onSelectKitchen,
+  onMove,
   money,
   gameDay,
 }: ApartmentViewProps) {
@@ -43,8 +45,9 @@ export function ApartmentView({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 20,
+        gap: 8,
       }}>
-        <div>
+        <div style={{ flex: 1 }}>
           <h2 style={{ margin: 0, color: theme.text, fontSize: 18, fontWeight: 600 }}>
             {housing.emoji} {housing.name}
           </h2>
@@ -52,6 +55,24 @@ export function ApartmentView({
             Rent: ${housing.rentPerWeek}/week · {hobbySlots.length} hobby space{hobbySlots.length > 1 ? 's' : ''}
           </span>
         </div>
+        <button
+          onClick={onMove}
+          style={{
+            padding: '8px 12px',
+            background: theme.bgAlt,
+            border: `1px solid ${theme.border}`,
+            borderRadius: theme.radiusMd,
+            color: theme.textSecondary,
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          🗺️ Move
+        </button>
         <div style={{
           background: theme.moneyLight,
           padding: '8px 16px',

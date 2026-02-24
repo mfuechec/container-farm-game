@@ -15,6 +15,7 @@ import { audio } from './engine/audio';
 import { ApartmentView } from './apartment/ApartmentView';
 import { PlantHobby } from './hobbies/plants/PlantHobby';
 import { MushroomHobby } from './hobbies/mushrooms/MushroomHobby';
+import { CityMap, HousingPreview, HobbySelectModal, HousingTier } from './housing';
 import { HobbySlot } from './apartment/types';
 import { calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier } from './kitchen/types';
 import { getRentForWeek } from './economy/types';
@@ -35,6 +36,11 @@ export function Game() {
       audio.play('click');
     }
   };
+
+  // Housing state
+  const [selectedHousing, setSelectedHousing] = useState<HousingTier | null>(null);
+  const [showHobbySelect, setShowHobbySelect] = useState(false);
+  const [pendingTier, setPendingTier] = useState<HousingTier | null>(null);
   
   // Store state - use shallow to prevent unnecessary re-renders
   const { view, apartment, kitchen, economy, gameDay } = useGameStore(
@@ -52,6 +58,8 @@ export function Game() {
   const setSelectedSlot = useGameStore(s => s.setSelectedSlot);
   const startHobby = useGameStore(s => s.startHobby);
   const skipTime = useGameStore(s => s.skipTime);
+  const upgradeHousing = useGameStore(s => s.upgradeHousing);
+  const downgradeHousing = useGameStore(s => s.downgradeHousing);
   
   // Derived values - compute from state directly
   const kitchenBonuses = useMemo(() => getActiveKitchenBonuses(kitchen.storage), [kitchen.storage]);
@@ -96,6 +104,7 @@ export function Game() {
           kitchen={kitchen}
           onSelectHobby={handleSelectHobby}
           onSelectKitchen={() => setView('kitchen')}
+          onMove={() => setView('housing')}
           money={economy.money}
           gameDay={gameDay}
         />
@@ -144,7 +153,55 @@ export function Game() {
         />
       );
       break;
+
+    case 'housing':
+      content = selectedHousing ? (
+        <HousingPreview
+          tier={selectedHousing}
+          currentTier={apartment.housing}
+          currentDeposit={apartment.securityDeposit}
+          currentHobbies={apartment.hobbySlots.map(s => s.hobby)}
+          money={economy.money}
+          onMove={() => {
+            const isUpgrade = selectedHousing.hobbySlots >= apartment.housing.hobbySlots;
+            if (isUpgrade) {
+              upgradeHousing(selectedHousing.id);
+            } else {
+              // For downgrade without hobby conflict, keep all hobbies that fit
+              const keepIndices = apartment.hobbySlots
+                .filter(s => s.hobby !== null)
+                .slice(0, selectedHousing.hobbySlots)
+                .map(s => s.index);
+              downgradeHousing(selectedHousing.id, keepIndices);
+            }
+            setSelectedHousing(null);
+          }}
+          onCancel={() => setSelectedHousing(null)}
+          onNeedsHobbySelection={(maxSlots) => {
+            setPendingTier(selectedHousing);
+            setShowHobbySelect(true);
+          }}
+        />
+      ) : (
+        <CityMap
+          currentTierId={apartment.housing.id}
+          money={economy.money}
+          onSelectHousing={(tier) => setSelectedHousing(tier)}
+          onBack={handleBack}
+        />
+      );
+      break;
   }
+
+  // Handle hobby select modal for downgrade
+  const handleHobbySelectConfirm = (keepIndices: number[]) => {
+    if (pendingTier) {
+      downgradeHousing(pendingTier.id, keepIndices);
+      setShowHobbySelect(false);
+      setPendingTier(null);
+      setSelectedHousing(null);
+    }
+  };
 
   return (
     <div style={{
@@ -193,6 +250,26 @@ export function Game() {
       <main style={{ padding: '16px 12px', maxWidth: 600, margin: '0 auto' }}>
         {content}
       </main>
+
+      {/* Hobby Select Modal for Downgrade */}
+      {showHobbySelect && pendingTier && (
+        <HobbySelectModal
+          hobbies={apartment.hobbySlots
+            .filter(s => s.hobby !== null)
+            .map(s => ({
+              index: s.index,
+              type: s.hobby,
+              name: s.hobby || '',
+              emoji: '',
+            }))}
+          maxSlots={pendingTier.hobbySlots}
+          onConfirm={handleHobbySelectConfirm}
+          onCancel={() => {
+            setShowHobbySelect(false);
+            setPendingTier(null);
+          }}
+        />
+      )}
     </div>
   );
 }
