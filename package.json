@@ -18,7 +18,8 @@
     "test:unit:watch": "vitest",
     "chromatic": "npx chromatic --exit-zero-on-changes",
     "verify": "./scripts/verify.sh",
-    "smoke": "npx tsx scripts/smoke-test.ts"
+    "smoke": "npx tsx scripts/smoke-test.ts",
+    "verify:quick": "./scripts/verify.sh --quick"
   },
   "dependencies": {
     "howler": "^2.2.4",
