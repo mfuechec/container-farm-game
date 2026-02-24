@@ -619,3 +619,102 @@ export const DarkTheme: StoryObj = {
     </div>
   ),
 };
+
+// Viewport-specific stories for visual regression testing
+// These catch canvas sizing issues at different screen widths
+
+export const MobileWidth: StoryObj = {
+  parameters: {
+    viewport: { defaultViewport: 'mobile1' },
+    chromatic: { viewports: [320] },
+  },
+  render: () => (
+    <div style={{ 
+      background: lightTheme.bg, 
+      padding: 16, 
+      borderRadius: 12,
+      width: '100%',
+    }}>
+      <PlantHobby 
+        theme={lightTheme}
+        money={500}
+        pots={[
+          { id: 'pot1', slot: 0, typeId: 'basic', plant: 'plant1' },
+          { id: 'pot2', slot: 1, typeId: 'basic' },
+        ]}
+        plants={{
+          plant1: { id: 'plant1', typeId: 'basil', growthProgress: 0.5, stage: 'growing' },
+        }}
+        seeds={{ basil: 5 }}
+      />
+    </div>
+  ),
+};
+
+export const TabletWidth: StoryObj = {
+  parameters: {
+    viewport: { defaultViewport: 'tablet' },
+    chromatic: { viewports: [768] },
+  },
+  render: () => (
+    <div style={{ 
+      background: lightTheme.bg, 
+      padding: 24, 
+      borderRadius: 12,
+      width: '100%',
+    }}>
+      <PlantHobby 
+        theme={lightTheme}
+        money={500}
+        tableSlots={4}
+        lightCoverage={4}
+        pots={[
+          { id: 'pot1', slot: 0, typeId: 'basic', plant: 'plant1' },
+          { id: 'pot2', slot: 1, typeId: 'basic', plant: 'plant2' },
+          { id: 'pot3', slot: 2, typeId: 'basic' },
+          { id: 'pot4', slot: 3, typeId: 'basic' },
+        ]}
+        plants={{
+          plant1: { id: 'plant1', typeId: 'basil', growthProgress: 1, stage: 'harvestable' },
+          plant2: { id: 'plant2', typeId: 'mint', growthProgress: 0.6, stage: 'growing' },
+        }}
+        seeds={{ basil: 3, mint: 2 }}
+      />
+    </div>
+  ),
+};
+
+export const DesktopWidth: StoryObj = {
+  parameters: {
+    chromatic: { viewports: [1200] },
+  },
+  render: () => (
+    <div style={{ 
+      background: lightTheme.bg, 
+      padding: 24, 
+      borderRadius: 12,
+      maxWidth: 600,
+      margin: '0 auto',
+    }}>
+      <PlantHobby 
+        theme={lightTheme}
+        money={1500}
+        tableSlots={8}
+        lightCoverage={8}
+        pots={[
+          { id: 'pot1', slot: 0, typeId: 'basic', plant: 'plant1' },
+          { id: 'pot2', slot: 1, typeId: 'basic', plant: 'plant2' },
+          { id: 'pot3', slot: 2, typeId: 'basic', plant: 'plant3' },
+          { id: 'pot4', slot: 3, typeId: 'basic' },
+          { id: 'pot5', slot: 4, typeId: 'basic' },
+        ]}
+        plants={{
+          plant1: { id: 'plant1', typeId: 'basil', growthProgress: 1, stage: 'harvestable' },
+          plant2: { id: 'plant2', typeId: 'mint', growthProgress: 0.8, stage: 'growing' },
+          plant3: { id: 'plant3', typeId: 'parsley', growthProgress: 0.3, stage: 'sprout' },
+        }}
+        seeds={{ basil: 10, mint: 5, parsley: 3 }}
+      />
+    </div>
+  ),
+};
