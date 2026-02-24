@@ -610,6 +610,9 @@ export const useGameStore = create<GameStore>()(
             harvest: newMushroomHarvest,
           },
         });
+        
+        // Process daily meal after time skip
+        get().processDailyMeal();
       },
       
       tick: () => {
