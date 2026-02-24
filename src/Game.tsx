@@ -20,6 +20,8 @@ import { HobbySlot } from './apartment/types';
 import { calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier } from './kitchen/types';
 import { getRentForWeek } from './economy/types';
 import { getWeeklyRentalCost } from './market/types';
+import { ToastContainer, useToast } from './ui/toast';
+import { detectKitchenCombos, detectGardenCombos, detectNewCombos, ActiveCombo } from './combos';
 // getActiveKitchenBonuses, getBonusMultiplier used for derived values display
 
 // Tick interval
@@ -83,6 +85,36 @@ export function Game() {
     
     return () => clearInterval(interval);
   }, []);
+
+  // Toast system for combo notifications
+  const { showToast } = useToast();
+  const prevKitchenCombosRef = React.useRef<ActiveCombo[]>([]);
+  const prevGardenCombosRef = React.useRef<ActiveCombo[]>([]);
+
+  // Detect kitchen combos
+  const kitchenItemTypes = useMemo(
+    () => kitchen.storage.map(item => item.sourceType),
+    [kitchen.storage]
+  );
+  const kitchenCombos = useMemo(
+    () => detectKitchenCombos(kitchenItemTypes),
+    [kitchenItemTypes]
+  );
+
+  // Check for new kitchen combos and show toast
+  useEffect(() => {
+    const newCombos = detectNewCombos(prevKitchenCombosRef.current, kitchenCombos);
+    newCombos.forEach(combo => {
+      showToast({
+        type: 'combo',
+        title: combo.name,
+        subtitle: combo.bonusDescription,
+        emoji: combo.emoji,
+      }, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      audio.play('click'); // Play a sound for combo discovery
+    });
+    prevKitchenCombosRef.current = kitchenCombos;
+  }, [kitchenCombos, showToast]);
 
   // Navigation handlers
   const handleSelectHobby = (slot: HobbySlot) => {
@@ -276,6 +308,9 @@ export function Game() {
           }}
         />
       )}
+
+      {/* Toast notifications */}
+      <ToastContainer theme={theme} />
     </div>
   );
 }

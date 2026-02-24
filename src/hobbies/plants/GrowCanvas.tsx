@@ -25,6 +25,7 @@ import {
   Particle,
   ANIMATION_CONFIG,
 } from './animations';
+import { drawLeaf, getPlantVisual, getGrowthValues } from './rendering';
 
 interface GrowCanvasProps {
   width: number;
@@ -648,54 +649,51 @@ function drawPlant(container: Container, potWidth: number, potHeight: number, pl
     container.position.set(potWidth / 2, potHeight / 2);
   }
 
-  const plantType = getPlantType(plant.typeId);
-  if (!plantType) return;
-
+  // Get visual config for this plant type
+  const visual = getPlantVisual(plant.typeId);
   const growth = plant.growthProgress;
   const stage = plant.stage;
+  const values = getGrowthValues(visual, growth);
 
-  // Color variations by plant type
-  const hueShift = plantType.id === 'basil' ? 0 : plantType.id === 'mint' ? -15 : 10;
-  const leafColor = COLORS.leafGreen;
-  const stemColor = COLORS.stemGreen;
-
-  const stemHeight = 10 + growth * 35;
   const stemX = potWidth / 2;
   const stemBase = 12; // Just above pot rim
 
   if (stage === 'seed') {
-    // Tiny sprout
+    // Tiny sprout - same for all plants
     g.moveTo(stemX, stemBase);
     g.lineTo(stemX, stemBase - 8);
-    g.stroke({ color: stemColor, width: 2, cap: 'round' });
+    g.stroke({ color: visual.stemColor, width: 2, cap: 'round' });
     
     g.ellipse(stemX, stemBase - 10, 5, 3);
-    g.fill({ color: leafColor, alpha: 0.7 });
+    g.fill({ color: visual.leafColor, alpha: 0.7 });
   } else {
-    // Stem
+    // Draw stem
     g.moveTo(stemX, stemBase);
-    g.lineTo(stemX, stemBase - stemHeight);
-    g.stroke({ color: stemColor, width: 2 + growth * 2, cap: 'round' });
+    g.lineTo(stemX, stemBase - values.stemHeight);
+    g.stroke({ color: visual.stemColor, width: 2 + growth * 2, cap: 'round' });
 
-    // Leaves
-    const leafCount = Math.floor(2 + growth * 5);
-    const leafSize = 6 + growth * 10;
-
-    for (let i = 0; i < leafCount; i++) {
+    // Draw leaves with type-specific shape
+    for (let i = 0; i < values.leafCount; i++) {
       const tier = Math.floor(i / 2);
-      const y = stemBase - (tier + 1) * (stemHeight / (leafCount / 2 + 1));
+      const y = stemBase - (tier + 1) * (values.stemHeight / (values.leafCount / 2 + 1));
       const isLeft = i % 2 === 0;
-      const xOffset = leafSize * 0.5 * (isLeft ? -1 : 1);
-      const rotation = isLeft ? -0.6 : 0.6;
+      const xOffset = values.leafSize * 0.4 * (isLeft ? -1 : 1);
+      const rotation = isLeft ? -0.5 : 0.5;
 
-      g.ellipse(stemX + xOffset, y, leafSize * 0.6, leafSize * 0.35);
-      g.fill(leafColor);
+      drawLeaf(g, visual.leafShape, {
+        x: stemX + xOffset,
+        y,
+        size: values.leafSize,
+        rotation,
+        color: visual.leafColor,
+        alpha: 0.9,
+      });
     }
 
-    // Flower/bud for harvestable
-    if (stage === 'harvestable') {
-      g.circle(stemX, stemBase - stemHeight - 5, 6);
-      g.fill(COLORS.highlight);
+    // Flower/bud for harvestable - use plant's flower color
+    if (stage === 'harvestable' && visual.flowerColor) {
+      g.circle(stemX, stemBase - values.stemHeight - 5, 6);
+      g.fill(visual.flowerColor);
     }
   }
 }
