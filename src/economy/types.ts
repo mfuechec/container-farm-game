@@ -15,8 +15,8 @@ export interface EconomyState {
 export const INITIAL_ECONOMY: EconomyState = {
   money: 100,
   weeklyRent: 50,          // Flat rent
-  weeklyGroceryBase: 10,   // Base groceries, herbs reduce this
-  weeklyIncome: 60,        // Day job covers rent + groceries
+  weeklyGroceryBase: 25,   // Base groceries, herbs reduce this
+  weeklyIncome: 60,        // Day job covers rent, hobby covers groceries
 };
 
 /**

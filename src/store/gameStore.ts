@@ -959,14 +959,18 @@ export const useGameStore = create<GameStore>()(
       // Merge persisted state with defaults to handle missing fields from old saves
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<GameState>;
+        // Migrate old saves with wrong grocery values
+        const migratedEconomy = {
+          ...INITIAL_ECONOMY,
+          ...persisted.economy,
+          // Force grocery base to current balance (migrates old $50 or $10 saves)
+          weeklyGroceryBase: INITIAL_ECONOMY.weeklyGroceryBase,
+        };
         return {
           ...currentState,
           ...persisted,
           // Ensure economy has all fields (handles old saves missing weeklyIncome)
-          economy: {
-            ...INITIAL_ECONOMY,
-            ...persisted.economy,
-          },
+          economy: migratedEconomy,
           // Ensure market state exists (handles old saves)
           market: {
             ...INITIAL_MARKET,
