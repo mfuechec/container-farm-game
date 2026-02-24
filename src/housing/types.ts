@@ -26,7 +26,7 @@ export const HOUSING_TIERS: HousingTier[] = [
     name: 'Studio',
     emoji: '🏠',
     hobbySlots: 1,
-    rentPerWeek: 50,
+    rentPerWeek: 375,      // $1500/month
     hasKitchen: true,
     description: 'Cozy studio apartment. One hobby space.',
     mapPosition: { x: 25, y: 70 },
@@ -36,7 +36,7 @@ export const HOUSING_TIERS: HousingTier[] = [
     name: '1BR Apartment',
     emoji: '🏢',
     hobbySlots: 2,
-    rentPerWeek: 80,
+    rentPerWeek: 500,      // $2000/month
     hasKitchen: true,
     description: 'More room to grow. Two hobby spaces.',
     mapPosition: { x: 50, y: 45 },
@@ -46,7 +46,7 @@ export const HOUSING_TIERS: HousingTier[] = [
     name: '2BR Apartment',
     emoji: '🏡',
     hobbySlots: 3,
-    rentPerWeek: 120,
+    rentPerWeek: 700,      // $2800/month
     hasKitchen: true,
     description: 'Dedicated hobby room. Three spaces.',
     mapPosition: { x: 75, y: 25 },

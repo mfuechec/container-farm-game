@@ -8,9 +8,10 @@ import { EconomyState } from '../economy/types';
 
 /**
  * Get rent amount (flat rate)
+ * NOTE: This is a fallback. Actual rent comes from housing tier.
  */
 export function getRentForWeek(_week: number): number {
-  return 50;  // Flat $50/week
+  return 375;  // Default to studio rent ($1500/month)
 }
 
 /**
