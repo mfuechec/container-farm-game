@@ -8,7 +8,7 @@
  *   - PlantMenu (seed selection modal)
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { useTheme } from '../../theme';
 import { useGameStore, selectYieldMultiplier } from '../../store/gameStore';
 import { GrowCanvas } from './GrowCanvas';
@@ -52,11 +52,12 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
   const [showPlantMenu, setShowPlantMenu] = useState(false);
   const [tab, setTab] = useState<'grow' | 'harvest' | 'shop'>('grow');
   
-  // Responsive canvas sizing
+  // Responsive canvas sizing - use useLayoutEffect to measure before paint
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 400, height: 200 });
+  const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
   
-  useEffect(() => {
+  // Measure synchronously before paint to prevent flash
+  useLayoutEffect(() => {
     const container = canvasContainerRef.current;
     if (!container) return;
     
@@ -70,10 +71,10 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
       setCanvasSize({ width, height });
     };
     
-    // Initial size
+    // Initial size - runs before paint
     updateSize();
     
-    // Watch for resize
+    // Watch for resize (can use regular effect behavior)
     const resizeObserver = new ResizeObserver(updateSize);
     resizeObserver.observe(container);
     
@@ -166,13 +167,17 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
               padding: 8,
               width: '100%',
               boxSizing: 'border-box',
+              // Reserve space while measuring to prevent layout shift
+              minHeight: canvasSize ? canvasSize.height + 16 : 200,
             }}
           >
-            <GrowCanvas
-              width={canvasSize.width}
-              height={canvasSize.height}
-              onSlotClick={handleSlotClick}
-            />
+            {canvasSize && (
+              <GrowCanvas
+                width={canvasSize.width}
+                height={canvasSize.height}
+                onSlotClick={handleSlotClick}
+              />
+            )}
           </div>
         )}
 
