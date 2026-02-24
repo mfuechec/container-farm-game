@@ -89,6 +89,8 @@ export function Game() {
     setSelectedSlot(slot.index);
     if (slot.hobby === 'plants') {
       setView('hobby-plants');
+    } else if (slot.hobby === 'mushrooms') {
+      setView('hobby-mushrooms');
     } else if (slot.hobby === null) {
       setView('hobby-select');
     }
