@@ -19,6 +19,7 @@ import { CityMap, HousingPreview, HobbySelectModal, HousingTier } from './housin
 import { HobbySlot } from './apartment/types';
 import { calculateGrocerySavings, getActiveKitchenBonuses, getBonusMultiplier } from './kitchen/types';
 import { getRentForWeek } from './economy/types';
+import { getWeeklyRentalCost } from './market/types';
 // getActiveKitchenBonuses, getBonusMultiplier used for derived values display
 
 // Tick interval
@@ -43,13 +44,14 @@ export function Game() {
   const [pendingTier, setPendingTier] = useState<HousingTier | null>(null);
   
   // Store state - use shallow to prevent unnecessary re-renders
-  const { view, apartment, kitchen, economy, gameDay } = useGameStore(
+  const { view, apartment, kitchen, economy, gameDay, market } = useGameStore(
     useShallow(s => ({
       view: s.view,
       apartment: s.apartment,
       kitchen: s.kitchen,
       economy: s.economy,
       gameDay: s.gameDay,
+      market: s.market,
     }))
   );
   
@@ -69,7 +71,8 @@ export function Game() {
   // Calculate current week and dynamic rent (single source of truth)
   const currentWeek = Math.ceil(gameDay / 7);
   const currentRent = getRentForWeek(currentWeek);
-  const weeklyExpenses = currentRent + Math.max(0, economy.weeklyGroceryBase - grocerySavings);
+  const marketRent = getWeeklyRentalCost(market.rentalTier);
+  const weeklyExpenses = currentRent + Math.max(0, economy.weeklyGroceryBase - grocerySavings) + marketRent;
 
   // Game tick - handle time passing (runs once on mount)
   useEffect(() => {
@@ -146,6 +149,7 @@ export function Game() {
           weeklyIncome={economy.weeklyIncome}
           currentRent={currentRent}
           groceryBase={economy.weeklyGroceryBase}
+          marketRent={marketRent}
           currentWeek={currentWeek}
           kitchenBonuses={kitchenBonuses}
           onBack={handleBack}
@@ -360,6 +364,7 @@ function KitchenView({
   weeklyIncome,
   currentRent,
   groceryBase,
+  marketRent,
   currentWeek,
   kitchenBonuses,
   onBack,
@@ -371,6 +376,7 @@ function KitchenView({
   weeklyIncome: number;
   currentRent: number;
   groceryBase: number;
+  marketRent: number;
   currentWeek: number;
   kitchenBonuses: any[];
   onBack: () => void;
@@ -424,6 +430,12 @@ function KitchenView({
           <span style={{ color: theme.textSecondary, fontSize: 12 }}>🛒 Groceries</span>
           <span style={{ color: theme.textSecondary, fontSize: 12 }}>-${groceryBase}</span>
         </div>
+        {marketRent > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ color: theme.textSecondary, fontSize: 12 }}>🏪 Market stall</span>
+            <span style={{ color: theme.textSecondary, fontSize: 12 }}>-${marketRent.toFixed(0)}</span>
+          </div>
+        )}
         {grocerySavings > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
             <span style={{ color: theme.textSecondary, fontSize: 12 }}>🌿 Herb savings</span>
