@@ -16,19 +16,19 @@ export interface MarketRentalInfo {
 export const MARKET_RENTALS: Record<Exclude<MarketRentalTier, null>, MarketRentalInfo> = {
   weekly: {
     tier: 'weekly',
-    cost: 15,
+    cost: 50,
     frequencyDays: 7,
     label: 'Weekly',
   },
   biweekly: {
     tier: 'biweekly',
-    cost: 10,
+    cost: 70,
     frequencyDays: 14,
     label: 'Bi-weekly',
   },
   monthly: {
     tier: 'monthly',
-    cost: 20,
+    cost: 100,
     frequencyDays: 28,
     label: 'Monthly',
   },

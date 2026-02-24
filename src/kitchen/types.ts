@@ -36,7 +36,7 @@ export interface KitchenState {
 
 export const INITIAL_KITCHEN: KitchenState = {
   storage: [],
-  capacity: 5,
+  capacity: 8,  // Unique items only - variety matters
 };
 
 /**

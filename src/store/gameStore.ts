@@ -195,9 +195,28 @@ export const useGameStore = create<GameStore>()(
         return true;
       },
       
-      // Kitchen
+      // Kitchen - unique items only (one slot per item type)
       storeInKitchen: (item) => {
         const { kitchen } = get();
+        
+        // Check if we already have this type
+        const existingIndex = kitchen.storage.findIndex(
+          existing => existing.sourceType === item.sourceType
+        );
+        
+        if (existingIndex >= 0) {
+          // Replace existing with fresher item (keeps variety, rewards fresh harvest)
+          const existing = kitchen.storage[existingIndex];
+          if (item.freshness > existing.freshness) {
+            const newStorage = [...kitchen.storage];
+            newStorage[existingIndex] = item;
+            set({ kitchen: { ...kitchen, storage: newStorage } });
+            return true;
+          }
+          return false; // Existing is fresher, reject
+        }
+        
+        // New type - check capacity
         if (kitchen.storage.length >= kitchen.capacity) return false;
         set({
           kitchen: {
@@ -959,17 +978,19 @@ export const useGameStore = create<GameStore>()(
       // Merge persisted state with defaults to handle missing fields from old saves
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<GameState>;
-        // Migrate old saves with wrong grocery values
+        // Migrate old saves to new realistic economy
+        // Force all economy values to new scale (old saves had tiny values)
         const migratedEconomy = {
           ...INITIAL_ECONOMY,
-          ...persisted.economy,
-          // Force grocery base to current balance (migrates old $50 or $10 saves)
-          weeklyGroceryBase: INITIAL_ECONOMY.weeklyGroceryBase,
+          // Keep player's money but scale it up if from old save
+          money: (persisted.economy?.money ?? INITIAL_ECONOMY.money) < 200 
+            ? (persisted.economy?.money ?? 100) * 5  // Scale up old tiny money
+            : (persisted.economy?.money ?? INITIAL_ECONOMY.money),
         };
         return {
           ...currentState,
           ...persisted,
-          // Ensure economy has all fields (handles old saves missing weeklyIncome)
+          // Force new economy values
           economy: migratedEconomy,
           // Ensure market state exists (handles old saves)
           market: {
@@ -980,6 +1001,12 @@ export const useGameStore = create<GameStore>()(
           mushroomHobby: {
             ...INITIAL_MUSHROOM_STATE,
             ...persisted.mushroomHobby,
+          },
+          // Migrate kitchen capacity
+          kitchen: {
+            ...INITIAL_KITCHEN,
+            ...persisted.kitchen,
+            capacity: INITIAL_KITCHEN.capacity,
           },
         };
       },
