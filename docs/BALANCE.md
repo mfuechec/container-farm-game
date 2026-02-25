@@ -1,198 +1,224 @@
-# Economy Balance Analysis
+# Side Hustle Simulator — Balance Guide
 
-## Current Numbers
+> Tuning values for economy, progression, and game feel.
+
+*For game design context, see [GAME_DESIGN.md](./GAME_DESIGN.md).*
+*For implementation details, see [ARCHITECTURE.md](./ARCHITECTURE.md).*
+
+---
+
+## Current Values
 
 ### Starting State
-| Item | Value |
-|------|-------|
-| Starting Money | $100 |
-| Weekly Rent | $50 |
-| Weekly Groceries | $50 |
-| **Total Weekly Expenses** | **$100** |
 
-### Equipment (Starting - Free)
-| Item | Slots | Cost |
-|------|-------|------|
-| Small Desk | 2 pots | $0 |
-| Desk Lamp | 1 coverage | $0 |
-| Basic Pot | - | $5 each |
+| Item | Value | Monthly Equivalent |
+|------|-------|-------------------|
+| Starting Money | $500 | — |
+| Weekly Income (Day Job) | $750 | $3,000 |
+| Weekly Rent | $375 | $1,500 |
+| Weekly Groceries | $250 | $1,000 |
+| **Net Weekly (before hobbies)** | **+$125** | **$500** |
 
-### Plant Economics
-| Plant | Days | Yield | Price | Revenue | Seed Cost | Profit | $/Day |
-|-------|------|-------|-------|---------|-----------|--------|-------|
-| Mint | 5 | 3 | $3 | $9 | $4 | $5 | **$1.00** |
-| Cilantro | 6 | 2 | $4 | $8 | $5 | $3 | $0.50 |
-| Chives | 8 | 4 | $2 | $8 | $4 | $4 | $0.50 |
-| Basil | 7 | 2 | $4 | $8 | $5 | $3 | $0.43 |
-| Parsley | 10 | 2 | $5 | $10 | $6 | $4 | $0.40 |
+Player starts with a small buffer and marginal savings from their day job alone.
 
----
+### Housing Tiers
 
-## The Problem: Week 1 Simulation
+| Tier | Name | Hobby Slots | Weekly Rent | Deposit | Unlock |
+|------|------|-------------|-------------|---------|--------|
+| 1 | Studio | 2 | $188 | $750 | Start |
+| 2 | Small Apt | 3 | $250 | $1,000 | $2k savings |
+| 3 | 1BR Apt | 4 | $375 | $1,500 | $5k savings |
+| 4 | 2BR Apt | 6 | $500 | $2,000 | $10k savings |
 
-**Optimal play with Mint (best $/day):**
-
-| Day | Action | Money |
-|-----|--------|-------|
-| 0 | Start | $100 |
-| 0 | Buy 2 basic pots (-$10) | $90 |
-| 0 | Buy 2 mint seeds (-$8) | $82 |
-| 0 | Plant both | $82 |
-| 5 | Harvest + sell (+$18) | $100 |
-| 5 | Buy 2 more seeds (-$8) | $92 |
-| 7 | **RENT DUE** (-$100) | **-$8** 💀 |
-
-**Result: Bankrupt on Day 7 with perfect play.**
-
-### Why It's Broken
-
-Weekly expenses: **$100**  
-Max weekly income (2 pots, mint): **$10-18 profit**  
-
-The player needs to earn ~10x more than they can with starting equipment.
-
-To break even with current plant prices, you'd need **~20 mint pots** running continuously. But:
-- Start with 2 slots
-- Potting Bench ($50) = 4 slots
-- Grow Shelf ($120) = 6 slots
-
-Even fully upgraded, max slots = 6. Still can't cover rent.
+*Note: Current implementation uses flat $375/week rent. Housing-based rent not yet implemented.*
 
 ---
 
-## Proposed Fixes
+## Plant Economics
 
-### Option A: Slash Expenses (Recommended)
-Make early game survivable, scale difficulty later.
+### Herb Types
 
-```
-Week 1-2: Grace period (no rent - "first month free")
-Week 3+: Rent starts at $15/week, +$5/week until cap of $50
-Groceries: $10/week base (herbs reduce this)
-```
+| Plant | Growth (days) | Yield | Sell Price | Revenue | Seed Cost | Profit | $/Day |
+|-------|---------------|-------|------------|---------|-----------|--------|-------|
+| Basil | 7 | 2 | $4 | $8 | $3 | $5 | $0.71 |
+| Mint | 5 | 3 | $3 | $9 | $2 | $7 | $1.40 |
+| Parsley | 10 | 2 | $5 | $10 | $4 | $6 | $0.60 |
+| Cilantro | 6 | 2 | $4 | $8 | $3 | $5 | $0.83 |
+| Chives | 8 | 4 | $2 | $8 | $3 | $5 | $0.63 |
 
-**Week 1 with grace period:**
-| Day | Action | Money |
-|-----|--------|-------|
-| 0 | Start | $100 |
-| 0 | Buy 2 pots + 2 mint seeds | $82 |
-| 5 | Harvest + sell | $100 |
-| 5 | Replant | $92 |
-| 7 | Groceries only (-$10) | $82 |
-| 10 | Harvest | $100 |
-| 12 | Buy upgrade (clip light $25) | $75 |
-| 14 | Rent starts (-$15 + $10 groceries) | $50 |
+**Best $/day:** Mint (fast cycle, good yield)
+**Best total profit:** Mint ($7 per harvest)
 
-Player can progress! ✅
+### Equipment Costs
 
-### Option B: Boost Plant Economy
-Multiply all sell prices by 3-4x.
+| Item | Cost | Effect |
+|------|------|--------|
+| Basic Pot | $10 | Unlocks 1 grow slot |
+| Clamp Light | $25 | +20% growth speed (1 pot) |
+| LED Panel | $75 | +40% growth speed (4 pots) |
+| Large Table | $50 | Unlocks 2 additional pot slots |
 
-| Plant | Current | Proposed | Weekly Profit (2 pots) |
-|-------|---------|----------|------------------------|
-| Mint | $3 | $12 | ~$48 |
+### Wholesale vs Market
 
-Pros: Simple change  
-Cons: Numbers feel inflated, harder to balance upgrades
-
-### Option C: Monthly Rent
-Change rent from weekly to monthly (every 28 days).
-
-Pros: More breathing room  
-Cons: Less frequent decision points, feels slower
-
-### Option D: Hybrid (My Recommendation)
-
-1. **Grace period**: No rent Week 1-2
-2. **Gradual rent**: $15 → $20 → $25 → ... → $50 cap
-3. **Lower groceries**: $10 base (each stored herb saves $2-3)
-4. **Slight price bump**: +50% to sell prices
-
-```typescript
-// economy/types.ts
-export const INITIAL_ECONOMY: EconomyState = {
-  money: 100,
-  weeklyRent: 0,        // Starts at 0, increases after week 2
-  weeklyGroceryBase: 10,
-};
-
-// New: rent scaling
-export function getRentForWeek(week: number): number {
-  if (week <= 2) return 0;  // Grace period
-  return Math.min(50, 15 + (week - 3) * 5);  // 15, 20, 25... cap 50
-}
-```
-
-```typescript
-// plants/types.ts - Updated prices (+50%)
-{ id: 'mint', sellPrice: 4.5, ... }      // was 3
-{ id: 'basil', sellPrice: 6, ... }       // was 4
-{ id: 'cilantro', sellPrice: 6, ... }    // was 4
-{ id: 'parsley', sellPrice: 7.5, ... }   // was 5
-{ id: 'chives', sellPrice: 3, ... }      // was 2
-```
+| Channel | Multiplier | Availability |
+|---------|------------|--------------|
+| Wholesale | 0.6x | Always |
+| Farmers Market | 1.5-2.0x | Market days only |
 
 ---
 
-## Balance Targets
+## Mushroom Economics
 
-| Milestone | Target Time | How |
-|-----------|-------------|-----|
-| First pot | 0 (free start) | Start with $100, pot = $5 |
-| First harvest | Day 5-7 | Mint/Basil cycle |
-| Break even on weekly costs | Week 3 | After grace period ends |
-| First upgrade (clip light) | Week 2 | Saved from grace period |
-| Second table | Week 4-5 | Potting bench $50 |
-| Comfortable surplus | Week 6+ | 4+ pots running |
+### Mushroom Types
 
----
+| Mushroom | Growth (days) | Yield (oz) | Sell Price | Flushes |
+|----------|---------------|------------|------------|---------|
+| Oyster | 3 | 4 | $3/oz | 3 |
+| Lion's Mane | 5 | 3 | $6/oz | 2 |
+| Shiitake | 7 | 5 | $4/oz | 2 |
 
-## Testing Checklist
+### Equipment Costs
 
-After implementing changes:
-
-- [ ] Simulate Week 1-4 with "dumb player" (plant, harvest, sell, repeat)
-- [ ] Verify player stays solvent through Week 4
-- [ ] Verify upgrades feel achievable (not 10 weeks away)
-- [ ] Verify late-game still has challenge (rent cap matters)
-- [ ] Test grocery savings mechanic (storing herbs should help)
+| Item | Cost | Effect |
+|------|------|--------|
+| Grow Bag | $8 | 1 mushroom slot |
+| Spray Bottle | Free | Basic humidity |
+| Humidifier | $40 | +15% growth speed |
+| Fruiting Chamber | $100 | Optimal environment |
 
 ---
 
-## Current Status
+## Market System
 
-**✅ BALANCED** (as of 2026-02-22)
+### Rental Tiers
 
-### Changes Made
-1. **Grace period:** Weeks 1-2 have $0 rent ("first month free")
-2. **Gradual rent:** Week 3 = $15, Week 4 = $20, ... caps at $50
-3. **Lower groceries:** $10/week base (was $50)
-4. **Boosted prices:** +50-67% on all plant sell prices
+| Tier | Cost | Frequency | Weekly Cost |
+|------|------|-----------|-------------|
+| Weekly | $50 | Every 7 days | $50 |
+| Bi-weekly | $70 | Every 14 days | $35 |
+| Monthly | $100 | Every 28 days | $25 |
 
-### Simulation Results (8-week "dumb player" run)
-```
-Week 1: 🟢 $60 (rent $0) - bought pots + first upgrade
-Week 2: 🟢 $79 (rent $0) - building cash
-Week 3: 🔴 -$23 (rent $15) - bought Grow Shelf, in debt!
-Week 4: 🟡 $19 (rent $20) - recovering
-Week 5: 🟢 $45 (rent $25) - stabilizing
-Week 6: 🟢 $132 (rent $30) - comfortable
-Week 7: 🟢 $148 (rent $35) - growing
-Week 8: 🟢 $214 (rent $40) - thriving
-```
+**Strategy:** Monthly rental is most efficient, but requires holding harvest longer.
 
-### Balance Feels
-- **Early game:** Tight but survivable
-- **Mid game:** Tense upgrade decisions (going into debt for Grow Shelf is a real choice)
-- **Late game:** Rewarding — player earns surplus for good play
+---
 
-### Files Changed
-- `src/economy/types.ts` - getRentForWeek(), lowered groceries
-- `src/hobbies/plants/types.ts` - boosted sell prices
-- `src/engine/economyEngine.ts` - getRentForWeek() export
-- `src/engine/timeEngine.ts` - uses dynamic rent
+## Kitchen & Grocery Savings
 
-### Running the Simulation
+### Herb Storage Value
+
+Each herb stored in kitchen reduces weekly grocery bill:
+
+| Herb | Grocery Savings/unit |
+|------|---------------------|
+| Basil | $2 |
+| Mint | $2 |
+| Parsley | $2 |
+| Cilantro | $2 |
+| Chives | $1.50 |
+
+### Combo Bonuses
+
+| Combo | Trigger | Bonus |
+|-------|---------|-------|
+| Italian Herbs 🇮🇹 | Basil + Parsley in kitchen | +50% savings (those items) |
+| Fresh Duo ✨ | Mint + Cilantro in kitchen | +30% freshness |
+| Kitchen Staples 👨‍🍳 | 3+ herb types | +20% savings (all) |
+| Full Pantry 🏆 | 5+ herb types | +25% savings (all) |
+
+---
+
+## Synergy Bonuses
+
+### Cross-Hobby Effects
+
+| Source | Target | Bonus | Cap | Decay |
+|--------|--------|-------|-----|-------|
+| Plant harvest | Mushroom growth | +5% per harvest | 30% | 7 days |
+| Mushroom harvest | Plant yield | +3% per oz | 25% | 7 days |
+
+---
+
+## Progression Targets
+
+### Early Game (Week 1-2)
+
+| Milestone | Target | How |
+|-----------|--------|-----|
+| First harvest | Day 5-7 | Plant mint (fastest) |
+| Second pot | Day 7 | $10 from savings |
+| First light upgrade | Week 2 | $25 from harvests |
+
+### Mid Game (Week 3-6)
+
+| Milestone | Target | How |
+|-----------|--------|-----|
+| Full starter table | Week 3 | All pot slots filled |
+| Market stall rental | Week 4 | $50-100 for first rental |
+| Second hobby (mushrooms) | Week 4-5 | Housing upgrade or efficient savings |
+| Kitchen combos active | Week 5 | Strategic herb storage |
+
+### Late Game (Week 7+)
+
+| Milestone | Target | How |
+|-----------|--------|-----|
+| Synergies active | Week 7+ | Both hobbies producing |
+| Housing upgrade | Week 8-10 | $2k+ savings |
+| Quit job viable | Week 12+ | Passive income > expenses |
+
+---
+
+## Balance Philosophy
+
+### Core Tensions
+
+1. **Sell vs Store:** Selling makes money now. Storing saves money over time.
+2. **Upgrade vs Save:** Equipment costs money but increases earning potential.
+3. **Specialize vs Diversify:** Focus on one hobby or spread across many?
+4. **Wholesale vs Market:** Quick cash or wait for market day?
+
+### Feel Targets
+
+- **Early game:** Tight. Every decision matters. Bankruptcy is possible but avoidable.
+- **Mid game:** Breathing room. Upgrade decisions feel meaningful.
+- **Late game:** Comfortable. Focus shifts from survival to optimization.
+
+### Red Flags
+
+- ❌ Player can't survive Week 1 with reasonable play
+- ❌ Optimal strategy is to never buy upgrades
+- ❌ One hobby strictly dominates all others
+- ❌ Market is always better than wholesale (or vice versa)
+- ❌ Synergies are ignorable
+
+---
+
+## Testing
+
+### Simulation Script
+
 ```bash
 npx tsx scripts/simulate-balance.ts
 ```
+
+### Manual Testing
+
+1. Fresh save, play through Week 1-4
+2. Verify solvency without perfect play
+3. Verify upgrades feel achievable
+4. Test both "sell everything" and "store everything" strategies
+5. Confirm both strategies are viable but different
+
+---
+
+## Changelog
+
+### 2025-02-25
+- Updated to reflect current implementation
+- Documented housing tiers, market system, synergies
+- Added combo bonuses section
+- Aligned with GAME_DESIGN.md and ARCHITECTURE.md
+
+### 2025-02-22
+- Initial balance pass
+- Grace period removed (simplified to flat rent)
+- Starting money increased to $500
