@@ -13,6 +13,7 @@ import {
   calculateMoveTransaction,
   selectHobbiesToKeep,
 } from '../src/housing/types';
+import { HOUSING } from '../src/balance';
 
 describe('Housing Tiers', () => {
   it('should have 3 tiers with correct properties', () => {
@@ -51,14 +52,14 @@ describe('Housing Tiers', () => {
 
 describe('Deposit Calculations', () => {
   it('should calculate deposit as 2x weekly rent', () => {
-    const studio = HOUSING_TIERS[0]; // $50/week
-    expect(calculateDeposit(studio)).toBe(100);
-    
-    const oneBR = HOUSING_TIERS[1]; // $80/week
-    expect(calculateDeposit(oneBR)).toBe(160);
-    
-    const twoBR = HOUSING_TIERS[2]; // $120/week
-    expect(calculateDeposit(twoBR)).toBe(240);
+    const studio = HOUSING_TIERS[0];
+    expect(calculateDeposit(studio)).toBe(HOUSING[0].rentPerWeek * 2);
+
+    const oneBR = HOUSING_TIERS[1];
+    expect(calculateDeposit(oneBR)).toBe(HOUSING[1].rentPerWeek * 2);
+
+    const twoBR = HOUSING_TIERS[2];
+    expect(calculateDeposit(twoBR)).toBe(HOUSING[2].rentPerWeek * 2);
   });
 });
 
@@ -66,54 +67,57 @@ describe('Affordability Checks', () => {
   const studio = HOUSING_TIERS[0];
   const oneBR = HOUSING_TIERS[1];
   const twoBR = HOUSING_TIERS[2];
-  
+  const studioDeposit = HOUSING[0].rentPerWeek * 2;
+  const oneBRDeposit = HOUSING[1].rentPerWeek * 2;
+  const twoBRDeposit = HOUSING[2].rentPerWeek * 2;
+  const netUpgradeCost = oneBRDeposit - studioDeposit;
+
   it('should allow upgrade with sufficient funds', () => {
-    // Upgrading from studio ($100 deposit) to 1BR ($160 deposit)
-    // Net cost: $160 - $100 = $60
-    expect(canAffordUpgrade(studio, oneBR, 100, 60)).toBe(true);
-    expect(canAffordUpgrade(studio, oneBR, 100, 100)).toBe(true);
+    expect(canAffordUpgrade(studio, oneBR, studioDeposit, netUpgradeCost)).toBe(true);
+    expect(canAffordUpgrade(studio, oneBR, studioDeposit, netUpgradeCost + 100)).toBe(true);
   });
 
   it('should block upgrade with insufficient funds', () => {
-    // Need $60 for upgrade, only have $50
-    expect(canAffordUpgrade(studio, oneBR, 100, 50)).toBe(false);
+    expect(canAffordUpgrade(studio, oneBR, studioDeposit, netUpgradeCost - 1)).toBe(false);
   });
 
   it('should allow downgrade regardless of funds (returns deposit)', () => {
-    // Downgrading from 1BR to studio: get $60 back
-    expect(canAffordUpgrade(oneBR, studio, 160, 0)).toBe(true);
-    expect(canAffordUpgrade(twoBR, studio, 240, 0)).toBe(true);
+    expect(canAffordUpgrade(oneBR, studio, oneBRDeposit, 0)).toBe(true);
+    expect(canAffordUpgrade(twoBR, studio, twoBRDeposit, 0)).toBe(true);
   });
 });
 
 describe('Move Transaction Calculations', () => {
-  const studio = HOUSING_TIERS[0]; // $100 deposit
-  const oneBR = HOUSING_TIERS[1]; // $160 deposit
-  const twoBR = HOUSING_TIERS[2]; // $240 deposit
-  
+  const studio = HOUSING_TIERS[0];
+  const oneBR = HOUSING_TIERS[1];
+  const twoBR = HOUSING_TIERS[2];
+  const studioDeposit = HOUSING[0].rentPerWeek * 2;
+  const oneBRDeposit = HOUSING[1].rentPerWeek * 2;
+  const twoBRDeposit = HOUSING[2].rentPerWeek * 2;
+
   it('should calculate upgrade transaction correctly', () => {
-    const result = calculateMoveTransaction(studio, oneBR, 100);
-    
-    expect(result.depositReturned).toBe(100);
-    expect(result.depositCharged).toBe(160);
-    expect(result.netCost).toBe(60); // Pay difference
+    const result = calculateMoveTransaction(studio, oneBR, studioDeposit);
+
+    expect(result.depositReturned).toBe(studioDeposit);
+    expect(result.depositCharged).toBe(oneBRDeposit);
+    expect(result.netCost).toBe(oneBRDeposit - studioDeposit);
     expect(result.isUpgrade).toBe(true);
   });
 
   it('should calculate downgrade transaction correctly', () => {
-    const result = calculateMoveTransaction(twoBR, studio, 240);
-    
-    expect(result.depositReturned).toBe(240);
-    expect(result.depositCharged).toBe(100);
-    expect(result.netCost).toBe(-140); // Get money back
+    const result = calculateMoveTransaction(twoBR, studio, twoBRDeposit);
+
+    expect(result.depositReturned).toBe(twoBRDeposit);
+    expect(result.depositCharged).toBe(studioDeposit);
+    expect(result.netCost).toBe(studioDeposit - twoBRDeposit);
     expect(result.isUpgrade).toBe(false);
   });
 
   it('should handle same-tier move (lateral)', () => {
-    const result = calculateMoveTransaction(oneBR, oneBR, 160);
-    
-    expect(result.depositReturned).toBe(160);
-    expect(result.depositCharged).toBe(160);
+    const result = calculateMoveTransaction(oneBR, oneBR, oneBRDeposit);
+
+    expect(result.depositReturned).toBe(oneBRDeposit);
+    expect(result.depositCharged).toBe(oneBRDeposit);
     expect(result.netCost).toBe(0);
     expect(result.isUpgrade).toBe(false);
   });

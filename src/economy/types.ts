@@ -12,18 +12,20 @@ export interface EconomyState {
   weeklyIncome: number;
 }
 
+import { ECONOMY, HOUSING } from '../balance';
+
 export const INITIAL_ECONOMY: EconomyState = {
-  money: 500,
-  weeklyRent: 375,         // $1500/month
-  weeklyGroceryBase: 250,  // $1000/month
-  weeklyIncome: 750,       // $1500 biweekly
+  money: ECONOMY.startingMoney,
+  weeklyRent: HOUSING[0].rentPerWeek,
+  weeklyGroceryBase: ECONOMY.weeklyGroceryBase,
+  weeklyIncome: ECONOMY.weeklyIncome,
 };
 
 /**
  * Get rent amount (flat rate, no scaling)
  */
 export function getRentForWeek(_week: number): number {
-  return 375;  // $1500/month
+  return HOUSING[0].rentPerWeek;
 }
 
 export interface Transaction {

@@ -1,9 +1,11 @@
 /**
  * Equipment System - Phase 1
- * 
+ *
  * Equipment determines your growing capabilities.
  * Tables have pot slots, lights provide coverage.
  */
+
+import { TABLES, LIGHTS, POTS } from '../../balance';
 
 export interface TableType {
   id: string;
@@ -43,45 +45,37 @@ export const TABLE_TYPES: TableType[] = [
     id: 'small_desk',
     name: 'Small Desk',
     emoji: '🪑',
-    potSlots: 4,
-    seedStorage: 10,
-    cost: 0,                 // Starter - free
     width: 2,
     height: 2,
     description: 'A corner of your desk. Room for a few pots.',
+    ...TABLES.small_desk,
   },
   {
     id: 'potting_bench',
     name: 'Potting Bench',
     emoji: '🪵',
-    potSlots: 8,
-    seedStorage: 20,
-    cost: 150,
     width: 4,
     height: 2,
     description: 'Dedicated workspace. Serious growing potential.',
+    ...TABLES.potting_bench,
   },
   {
     id: 'grow_shelf',
     name: 'Grow Shelf',
     emoji: '📚',
-    potSlots: 12,
-    seedStorage: 30,
-    cost: 350,
     width: 3,
     height: 3,
     description: 'Vertical space. Maximum efficiency.',
+    ...TABLES.grow_shelf,
   },
   {
     id: 'grow_tent',
     name: 'Grow Tent',
     emoji: '⛺',
-    potSlots: 16,
-    seedStorage: 50,
-    cost: 600,
     width: 4,
     height: 4,
     description: 'Full indoor setup. Professional grade growing.',
+    ...TABLES.grow_tent,
   },
 ];
 
@@ -90,37 +84,29 @@ export const LIGHT_TYPES: LightType[] = [
     id: 'desk_lamp',
     name: 'Desk Lamp',
     emoji: '💡',
-    coverage: 2,
-    growthBoost: 1.0,
-    cost: 0,                 // Starter - free
     description: 'Basic lamp. Covers a couple pots.',
+    ...LIGHTS.desk_lamp,
   },
   {
     id: 'clip_light',
     name: 'Clip Light',
     emoji: '🔦',
-    coverage: 4,
-    growthBoost: 1.2,
-    cost: 75,
     description: 'Flexible LED. Better coverage and growth.',
+    ...LIGHTS.clip_light,
   },
   {
     id: 'led_panel',
     name: 'LED Panel',
     emoji: '✨',
-    coverage: 8,
-    growthBoost: 1.5,
-    cost: 200,
     description: 'Full spectrum panel. Serious growing power.',
+    ...LIGHTS.led_panel,
   },
   {
     id: 'led_array',
     name: 'LED Array',
     emoji: '🌟',
-    coverage: 16,
-    growthBoost: 1.8,
-    cost: 450,
     description: 'Multi-panel setup. Maximum coverage and growth.',
+    ...LIGHTS.led_array,
   },
 ];
 
@@ -129,28 +115,22 @@ export const POT_TYPES: PotType[] = [
     id: 'basic_pot',
     name: 'Basic Pot',
     emoji: '🪴',
-    growthModifier: 1.0,
-    yieldModifier: 1.0,
-    cost: 25,
     description: 'Simple terracotta. Gets the job done.',
+    ...POTS.basic_pot,
   },
   {
     id: 'self_watering',
     name: 'Self-Watering Pot',
     emoji: '💧',
-    growthModifier: 1.1,
-    yieldModifier: 1.0,
-    cost: 75,
     description: 'Built-in reservoir. Slightly faster growth.',
+    ...POTS.self_watering,
   },
   {
     id: 'large_planter',
     name: 'Large Planter',
     emoji: '🏺',
-    growthModifier: 0.9,
-    yieldModifier: 1.3,
-    cost: 100,
     description: 'More root space. Slower but bigger harvests.',
+    ...POTS.large_planter,
   },
 ];
 

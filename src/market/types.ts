@@ -13,24 +13,23 @@ export interface MarketRentalInfo {
   label: string;
 }
 
+import { MARKET } from '../balance';
+
 export const MARKET_RENTALS: Record<Exclude<MarketRentalTier, null>, MarketRentalInfo> = {
   weekly: {
     tier: 'weekly',
-    cost: 50,
-    frequencyDays: 7,
     label: 'Weekly',
+    ...MARKET.rentals.weekly,
   },
   biweekly: {
     tier: 'biweekly',
-    cost: 70,
-    frequencyDays: 14,
     label: 'Bi-weekly',
+    ...MARKET.rentals.biweekly,
   },
   monthly: {
     tier: 'monthly',
-    cost: 100,
-    frequencyDays: 28,
     label: 'Monthly',
+    ...MARKET.rentals.monthly,
   },
 };
 

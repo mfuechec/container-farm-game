@@ -1,8 +1,11 @@
 /**
  * Combo Configuration
- * 
+ *
  * Data-driven combo definitions. Adding new combos = adding data, not code.
+ * Bonus values come from src/balance.ts.
  */
+
+import { COMBO_VALUES } from '../balance';
 
 export type ComboTrigger = 'kitchen' | 'garden' | 'both';
 export type BonusType = 'groceryMultiplier' | 'growthMultiplier' | 'yieldBonus' | 'freshnessMultiplier';
@@ -43,7 +46,7 @@ export const COMBOS: ComboDefinition[] = [
     emoji: '🇮🇹',
     description: 'Classic pasta combination',
     trigger: { type: 'kitchen', requiredItems: ['basil', 'parsley'] },
-    bonus: { type: 'groceryMultiplier', value: 1.5, scope: 'combo-items' },
+    bonus: COMBO_VALUES.italian_herbs,
   },
   {
     id: 'fresh_duo',
@@ -51,7 +54,7 @@ export const COMBOS: ComboDefinition[] = [
     emoji: '✨',
     description: 'Bright, fresh flavors together',
     trigger: { type: 'kitchen', requiredItems: ['mint', 'cilantro'] },
-    bonus: { type: 'freshnessMultiplier', value: 1.3, scope: 'combo-items' },
+    bonus: COMBO_VALUES.fresh_duo,
   },
   {
     id: 'kitchen_staples',
@@ -59,20 +62,20 @@ export const COMBOS: ComboDefinition[] = [
     emoji: '👨‍🍳',
     description: 'Well-stocked kitchen',
     trigger: { type: 'kitchen', requiredItems: ['basil', 'mint', 'parsley'], minCount: 3 },
-    bonus: { type: 'groceryMultiplier', value: 1.2, scope: 'all-items' },
+    bonus: COMBO_VALUES.kitchen_staples,
   },
   {
     id: 'full_pantry',
     name: 'Full Pantry',
     emoji: '🏆',
     description: 'Master gardener status',
-    trigger: { 
-      type: 'kitchen', 
+    trigger: {
+      type: 'kitchen',
       requiredItems: ['basil', 'mint', 'parsley', 'cilantro', 'chives'],
     },
-    bonus: { type: 'groceryMultiplier', value: 1.25, scope: 'all-items' },
+    bonus: COMBO_VALUES.full_pantry,
   },
-  
+
   // Garden combos - reward companion planting
   {
     id: 'companion_basil_parsley',
@@ -80,7 +83,7 @@ export const COMBOS: ComboDefinition[] = [
     emoji: '🤝',
     description: 'Basil and parsley grow well together',
     trigger: { type: 'garden', requiredItems: ['basil', 'parsley'] },
-    bonus: { type: 'growthMultiplier', value: 1.15, scope: 'combo-items' },
+    bonus: COMBO_VALUES.companion_basil_parsley,
   },
   {
     id: 'companion_mint_chives',
@@ -88,7 +91,7 @@ export const COMBOS: ComboDefinition[] = [
     emoji: '💚',
     description: 'Mint and chives complement each other',
     trigger: { type: 'garden', requiredItems: ['mint', 'chives'] },
-    bonus: { type: 'growthMultiplier', value: 1.1, scope: 'combo-items' },
+    bonus: COMBO_VALUES.companion_mint_chives,
   },
   {
     id: 'herb_garden',
@@ -96,7 +99,7 @@ export const COMBOS: ComboDefinition[] = [
     emoji: '🌿',
     description: 'A diverse garden thrives',
     trigger: { type: 'garden', requiredItems: ['basil', 'mint', 'parsley', 'cilantro'], minCount: 4 },
-    bonus: { type: 'yieldBonus', value: 1, scope: 'all-items' },  // +1 yield
+    bonus: COMBO_VALUES.herb_garden,
   },
 ];
 

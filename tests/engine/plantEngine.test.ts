@@ -14,7 +14,7 @@ import {
   canPlant,
   createPlant,
 } from '../../src/engine/plantEngine';
-import { PlantInstance, HarvestedPlant } from '../../src/hobbies/plants/types';
+import { PlantInstance, HarvestedPlant, PLANT_TYPES } from '../../src/hobbies/plants/types';
 
 describe('getGrowthStage', () => {
   it('returns seed for low progress', () => {
@@ -125,12 +125,14 @@ describe('calculateSellPrice', () => {
   it('calculates price based on quantity and freshness', () => {
     const harvest: HarvestedPlant = {
       id: 'test',
-      typeId: 'basil', // $6 sell price
+      typeId: 'basil',
       quantity: 3,
       freshness: 1.0,
       harvestedAt: Date.now(),
     };
-    expect(calculateSellPrice(harvest)).toBe(18); // 6 × 3 × 1.0
+    // sellPrice × quantity × freshness
+    const { sellPrice } = PLANT_TYPES.find(p => p.id === 'basil')!;
+    expect(calculateSellPrice(harvest)).toBe(sellPrice * 3 * 1.0);
   });
 
   it('reduces price for lower freshness', () => {

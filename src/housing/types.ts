@@ -20,33 +20,26 @@ export interface HousingTier {
   mapPosition: MapPosition;
 }
 
+import { HOUSING } from '../balance';
+
 export const HOUSING_TIERS: HousingTier[] = [
   {
-    id: 1,
-    name: 'Studio',
+    ...HOUSING[0],
     emoji: '🏠',
-    hobbySlots: 1,
-    rentPerWeek: 375,      // $1500/month
     hasKitchen: true,
     description: 'Cozy studio apartment. One hobby space.',
     mapPosition: { x: 25, y: 70 },
   },
   {
-    id: 2,
-    name: '1BR Apartment',
+    ...HOUSING[1],
     emoji: '🏢',
-    hobbySlots: 2,
-    rentPerWeek: 500,      // $2000/month
     hasKitchen: true,
     description: 'More room to grow. Two hobby spaces.',
     mapPosition: { x: 50, y: 45 },
   },
   {
-    id: 3,
-    name: '2BR Apartment',
+    ...HOUSING[2],
     emoji: '🏡',
-    hobbySlots: 3,
-    rentPerWeek: 700,      // $2800/month
     hasKitchen: true,
     description: 'Dedicated hobby room. Three spaces.',
     mapPosition: { x: 75, y: 25 },

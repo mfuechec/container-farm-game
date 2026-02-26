@@ -19,8 +19,10 @@ export interface SynergyEvent {
   gameDay: number;           // When it was created
 }
 
+import { SYNERGIES } from '../balance';
+
 // Synergy bonuses decay over this many days
-export const SYNERGY_DECAY_DAYS = 7;
+export const SYNERGY_DECAY_DAYS = SYNERGIES.decayDays;
 
 // How synergies work:
 // - Plant harvest generates compost (amount based on quantity)
@@ -183,9 +185,7 @@ export function getActiveSynergies(targetHobby: HobbyType, currentGameDay: numbe
  * @returns Synergy boost amount (0.1 = 10% mushroom growth boost)
  */
 export function calculateCompostSynergy(harvestQuantity: number): number {
-  // More harvest = more compost = bigger boost
-  // Cap at 30% boost
-  return Math.min(0.3, harvestQuantity * 0.05);
+  return Math.min(SYNERGIES.compost.cap, harvestQuantity * SYNERGIES.compost.perHarvest);
 }
 
 /**
@@ -194,9 +194,7 @@ export function calculateCompostSynergy(harvestQuantity: number): number {
  * @returns Synergy boost amount (0.1 = 10% plant yield boost)
  */
 export function calculateSubstrateSynergy(harvestQuantity: number): number {
-  // More mushrooms = more spent substrate = bigger boost
-  // Cap at 25% boost
-  return Math.min(0.25, harvestQuantity * 0.03);
+  return Math.min(SYNERGIES.spentSubstrate.cap, harvestQuantity * SYNERGIES.spentSubstrate.perOz);
 }
 
 /**
