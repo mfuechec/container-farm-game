@@ -1,30 +1,42 @@
 /**
  * Pantry & Kitchen View
- * 
- * Phase 1: Shows pantry contents and auto-generated daily meals
+ *
+ * Shows pantry contents, recipe-based cooking, and meal tracking.
  */
 
 import React from 'react';
-import { 
-  PantryState, PantryItem, Meal, 
+import {
+  PantryState, PantryItem, Meal,
   INGREDIENTS, STAPLE_IDS,
   getFreshness, getVarietyStats,
 } from '../engine/pantryEngine';
+import { KitchenState, RecipeId } from './types';
+import { STAPLES } from '../balance';
+import { StapleShop } from './components/StapleShop';
+import { RecipeBook } from './components/RecipeBook';
+import { MealHistory as RecipeMealHistory } from './components/MealHistory';
+import { VarietyStatus } from './components/VarietyStatus';
 
 interface PantryViewProps {
   pantry: PantryState;
+  kitchen: KitchenState;
   gameDay: number;
+  money: number;
   todaysMeal: Meal | null;
   onBuyStaple: (ingredientId: string) => void;
+  onBuyKitchenStaple: (stapleId: keyof typeof STAPLES, quantity?: number) => boolean;
   onBack: () => void;
   theme: any;
 }
 
 export function PantryView({
   pantry,
+  kitchen,
   gameDay,
+  money,
   todaysMeal,
   onBuyStaple,
+  onBuyKitchenStaple,
   onBack,
   theme,
 }: PantryViewProps) {
@@ -106,6 +118,48 @@ export function PantryView({
         <div>🍽️ Meals cooked: {pantry.totalMealsCooked}</div>
         <div>🥗 Unique ingredients this week: {varietyStats.uniqueIngredientsThisWeek}</div>
         <div>🔥 Variety streak: {varietyStats.currentStreak} days</div>
+      </div>
+
+      {/* === Recipe-Based Kitchen Section === */}
+      <div style={{
+        marginTop: 24,
+        paddingTop: 24,
+        borderTop: `1px solid ${theme.border}`,
+      }}>
+        <h3 style={{ margin: '0 0 16px', color: theme.text, fontSize: 16 }}>
+          Recipe Kitchen
+        </h3>
+
+        {/* Variety Bonus Status */}
+        <VarietyStatus
+          mealHistory={kitchen.mealHistory}
+          weekStartDay={kitchen.weekStartDay}
+          gameDay={gameDay}
+          theme={theme}
+        />
+
+        {/* Buy Kitchen Staples */}
+        <StapleShop
+          staples={kitchen.staples}
+          money={money}
+          onBuy={onBuyKitchenStaple}
+          theme={theme}
+        />
+
+        {/* Recipe Book */}
+        <RecipeBook
+          discoveredRecipes={kitchen.discoveredRecipes}
+          storage={kitchen.storage}
+          staples={kitchen.staples}
+          theme={theme}
+        />
+
+        {/* Recipe Meal History */}
+        <RecipeMealHistory
+          mealHistory={kitchen.mealHistory}
+          weekStartDay={kitchen.weekStartDay}
+          theme={theme}
+        />
       </div>
     </div>
   );

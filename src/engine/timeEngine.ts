@@ -10,7 +10,7 @@ import * as economyEngine from './economyEngine';
 import * as kitchenEngine from './kitchenEngine';
 import { PlantInstance, HarvestedPlant } from '../hobbies/plants/types';
 import { PotInstance } from '../hobbies/plants/equipment';
-import { KitchenState, KitchenBonus } from '../kitchen/types';
+import { KitchenState, KitchenBonus, getVarietyStatus } from '../kitchen/types';
 import { EconomyState } from '../economy/types';
 
 // Time constants
@@ -117,7 +117,16 @@ export function processTick(input: TickInput): TickOutput {
 
   // 1. Get kitchen bonuses (affects plant growth)
   const kitchenBonuses = kitchenEngine.getActiveKitchenBonuses(input.kitchen.storage);
-  const growthBonus = kitchenEngine.getBonusMultiplier(kitchenBonuses, 'growth');
+  const kitchenGrowthBonus = kitchenEngine.getBonusMultiplier(kitchenBonuses, 'growth');
+
+  // 1b. Get variety bonus from weekly meal diversity
+  const currentGameDay = calculateGameDay(input.gameStartTime, input.currentTime);
+  const varietyStatus = getVarietyStatus(
+    input.kitchen.mealHistory,
+    input.kitchen.weekStartDay,
+    currentGameDay
+  );
+  const growthBonus = kitchenGrowthBonus * (1 + varietyStatus.efficiencyBonus);
 
   // 2. Process plant growth
   const getLightBoost = (plantId: string): number => {
@@ -164,23 +173,33 @@ export function processTick(input: TickInput): TickOutput {
   // 5. Process weekly finances (if a week has passed)
   let newEconomy = input.economy;
   let newLastRentPaid = input.lastRentPaid;
-  const currentGameDay = calculateGameDay(input.gameStartTime, input.currentTime);
   const currentWeek = Math.ceil(currentGameDay / 7);
   
   if (economyEngine.isRentDue(input.lastRentPaid, input.currentTime, MS_PER_GAME_WEEK)) {
     const rent = economyEngine.getRentForWeek(currentWeek);
-    const grocerySavings = kitchenEngine.calculateGrocerySavings(newKitchen.storage);
-    const groceryCost = Math.max(0, input.groceryBase - grocerySavings);
-    
+    // Storage-based savings (raw ingredient value)
+    const storageSavings = kitchenEngine.calculateGrocerySavings(newKitchen.storage);
+    // Meal-based savings (cooked meals reduce groceries, takeout adds cost)
+    const { mealSavings, takeoutCosts } = kitchenEngine.calculateMealSavings(
+      newKitchen.mealHistory,
+      newKitchen.weekStartDay
+    );
+    const totalSavings = storageSavings + mealSavings;
+    const groceryCost = Math.max(0, input.groceryBase - totalSavings) + takeoutCosts;
+
     newEconomy = economyEngine.processWeeklyExpenses(
       input.economy,
       rent,
       input.groceryBase,
-      grocerySavings,
+      totalSavings - takeoutCosts, // net savings (takeout handled in groceryCost)
       input.weeklyIncome
     );
+    // Deduct takeout costs separately (processWeeklyExpenses doesn't know about them)
+    if (takeoutCosts > 0) {
+      newEconomy = { ...newEconomy, money: newEconomy.money - takeoutCosts };
+    }
     newLastRentPaid = input.currentTime;
-    
+
     const netChange = input.weeklyIncome - rent - groceryCost;
     events.push({
       type: 'rent_paid',
@@ -188,7 +207,9 @@ export function processTick(input: TickInput): TickOutput {
         income: input.weeklyIncome,
         rent,
         groceries: groceryCost,
-        savings: grocerySavings,
+        savings: totalSavings,
+        mealSavings,
+        takeoutCosts,
         netChange,
         week: currentWeek,
       },

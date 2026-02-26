@@ -19,8 +19,12 @@ import { ApartmentState, INITIAL_APARTMENT, HobbySlot, HOUSING_TIERS } from '../
 import {
   HousingTier, getHousingTier, calculateDeposit, calculateMoveTransaction,
 } from '../housing/types';
-import { KitchenState, INITIAL_KITCHEN, FoodItem } from '../kitchen/types';
+import { KitchenState, INITIAL_KITCHEN, FoodItem, StapleItem, RecipeId, MealLog } from '../kitchen/types';
 import { EconomyState, INITIAL_ECONOMY } from '../economy/types';
+import { STAPLES as KITCHEN_STAPLES, RECIPES, KITCHEN as KITCHEN_BALANCE } from '../balance';
+import {
+  canMakeRecipe, getDiscoverableRecipes, selectBestMeal, cookRecipe, calculateMealSavings,
+} from '../engine/kitchenEngine';
 import { PantryState, Meal, INGREDIENTS, STAPLE_IDS, PantryItem } from '../engine/pantryEngine';
 import { INITIAL_PANTRY, PantrySlice } from '../kitchen/pantryStore';
 import { MarketState, MarketRentalTier, INITIAL_MARKET, isMarketDay, MARKET_RENTALS } from '../market/types';
@@ -128,7 +132,10 @@ interface GameActions {
   
   // Kitchen
   storeInKitchen: (item: FoodItem) => boolean;
-  
+  buyKitchenStaple: (stapleId: keyof typeof KITCHEN_STAPLES, quantity?: number) => boolean;
+  cookDailyMeal: () => void;
+  resetWeeklyMeals: () => void;
+
   // Pantry
   addToPantry: (ingredientId: string, quantity: number, source: 'grown' | 'bought') => void;
   buyStaple: (ingredientId: string) => boolean;
@@ -243,7 +250,150 @@ export const useGameStore = create<GameStore>()(
         });
         return true;
       },
-      
+
+      buyKitchenStaple: (stapleId, quantity = 1) => {
+        const staple = KITCHEN_STAPLES[stapleId];
+        if (!staple) return false;
+
+        const totalCost = staple.price * quantity;
+        if (!get().spendMoney(totalCost)) return false;
+
+        const { kitchen } = get();
+        const existing = kitchen.staples.find(s => s.stapleId === stapleId);
+
+        if (existing) {
+          const newQty = Math.min(existing.quantity + quantity, staple.stackLimit);
+          if (newQty === existing.quantity) return false; // Already at stack limit
+          const actualBought = newQty - existing.quantity;
+          // Refund over-purchase
+          if (actualBought < quantity) {
+            get().addMoney((quantity - actualBought) * staple.price);
+          }
+          set({
+            kitchen: {
+              ...kitchen,
+              staples: kitchen.staples.map(s =>
+                s.stapleId === stapleId ? { ...s, quantity: newQty } : s
+              ),
+            },
+          });
+        } else {
+          const qty = Math.min(quantity, staple.stackLimit);
+          if (qty < quantity) {
+            get().addMoney((quantity - qty) * staple.price);
+          }
+          const newItem: StapleItem = {
+            id: `staple-${stapleId}-${Date.now()}`,
+            stapleId,
+            name: staple.name,
+            emoji: staple.emoji,
+            quantity: qty,
+          };
+          set({
+            kitchen: {
+              ...kitchen,
+              staples: [...kitchen.staples, newItem],
+            },
+          });
+        }
+
+        audio.play('buy');
+        return true;
+      },
+
+      cookDailyMeal: () => {
+        const state = get();
+        const currentDay = Math.floor(state.gameDay);
+        const { kitchen } = state;
+
+        // Only cook once per day (check if we already cooked today)
+        const alreadyCooked = kitchen.mealHistory.some(
+          m => Math.floor(m.cookedAt) === currentDay
+        );
+        if (alreadyCooked) return;
+
+        // 1. Check for new recipe discoveries
+        const newDiscoveries = getDiscoverableRecipes(
+          kitchen.storage,
+          kitchen.staples,
+          kitchen.discoveredRecipes
+        );
+        let discoveredRecipes = kitchen.discoveredRecipes;
+        if (newDiscoveries.length > 0) {
+          discoveredRecipes = [...discoveredRecipes, ...newDiscoveries];
+        }
+
+        // 2. Select best available meal
+        const recipeId = selectBestMeal(discoveredRecipes, kitchen.storage, kitchen.staples);
+
+        let updatedStorage = kitchen.storage;
+        let updatedStaples = kitchen.staples;
+        let meal: MealLog;
+
+        if (recipeId) {
+          // 3. Cook the meal
+          const result = cookRecipe(recipeId, kitchen.storage, kitchen.staples);
+          if (result) {
+            const recipe = RECIPES[recipeId];
+            updatedStorage = result.updatedStorage;
+            updatedStaples = result.updatedStaples;
+            meal = {
+              id: `meal-${currentDay}-${Date.now()}`,
+              recipeId,
+              recipeName: recipe.name,
+              emoji: recipe.emoji,
+              cookedAt: currentDay,
+              grocerySavings: recipe.groceryValue,
+              ingredientsUsed: result.ingredientsUsed,
+            };
+          } else {
+            // Shouldn't happen (selectBestMeal verified), but fallback to takeout
+            meal = {
+              id: `meal-${currentDay}-${Date.now()}`,
+              recipeId: null,
+              recipeName: 'Takeout',
+              emoji: '🥡',
+              cookedAt: currentDay,
+              grocerySavings: 0,
+              ingredientsUsed: [],
+            };
+          }
+        } else {
+          // 4. No meal possible — takeout
+          meal = {
+            id: `meal-${currentDay}-${Date.now()}`,
+            recipeId: null,
+            recipeName: 'Takeout',
+            emoji: '🥡',
+            cookedAt: currentDay,
+            grocerySavings: 0,
+            ingredientsUsed: [],
+          };
+        }
+
+        set({
+          kitchen: {
+            ...kitchen,
+            storage: updatedStorage,
+            staples: updatedStaples,
+            discoveredRecipes,
+            mealHistory: [...kitchen.mealHistory, meal],
+          },
+        });
+      },
+
+      resetWeeklyMeals: () => {
+        const state = get();
+        const currentDay = Math.floor(state.gameDay);
+        set({
+          kitchen: {
+            ...state.kitchen,
+            mealHistory: [],
+            weekStartDay: currentDay,
+          },
+        });
+      },
+
       // Pantry actions
       addToPantry: (ingredientId, quantity, source) => {
         const state = get();
@@ -576,12 +726,15 @@ export const useGameStore = create<GameStore>()(
         };
         
         const result = engine.time.skipTime(tickInput, days);
-        
+
+        // Check if weekly reset needed
+        const rentPaid = result.events.some(e => e.type === 'rent_paid');
+
         // Process mushroom growth separately
         const mushroomState = state.mushroomHobby;
         let newMushrooms = mushroomState.mushrooms;
         let newMushroomHarvest = mushroomState.harvest;
-        
+
         // Grow mushrooms
         for (const [id, mushroom] of Object.entries(mushroomState.mushrooms)) {
           newMushrooms = {
@@ -589,10 +742,10 @@ export const useGameStore = create<GameStore>()(
             [id]: calculateMushroomGrowth(mushroom, days, mushroomState.environment),
           };
         }
-        
+
         // Update mushroom harvest freshness
         newMushroomHarvest = updateMushroomFreshness(mushroomState.harvest, result.lastTick);
-        
+
         set({
           kitchen: result.kitchen,
           economy: result.economy,
@@ -610,11 +763,17 @@ export const useGameStore = create<GameStore>()(
             harvest: newMushroomHarvest,
           },
         });
-        
+
+        // Reset weekly meal tracking on new week
+        if (rentPaid) {
+          get().resetWeeklyMeals();
+        }
+
         // Process daily meal after time skip
         get().processDailyMeal();
+        get().cookDailyMeal();
       },
-      
+
       tick: () => {
         const state = get();
         const now = Date.now();
@@ -648,13 +807,16 @@ export const useGameStore = create<GameStore>()(
         if (result.events.length > 0) {
           console.log('[GameStore] Tick events:', result.events);
         }
-        
+
+        // Reset weekly meals when rent is paid (signals new week)
+        const rentPaid = result.events.some(e => e.type === 'rent_paid');
+
         // Process mushroom growth separately
         const deltaDays = (now - state.lastTick) / MS_PER_GAME_DAY;
         const mushroomState = state.mushroomHobby;
         let newMushrooms = mushroomState.mushrooms;
         let newMushroomHarvest = mushroomState.harvest;
-        
+
         // Grow mushrooms
         if (deltaDays > 0) {
           for (const [id, mushroom] of Object.entries(mushroomState.mushrooms)) {
@@ -663,11 +825,11 @@ export const useGameStore = create<GameStore>()(
               [id]: calculateMushroomGrowth(mushroom, deltaDays, mushroomState.environment),
             };
           }
-          
+
           // Update mushroom harvest freshness
           newMushroomHarvest = updateMushroomFreshness(mushroomState.harvest, now);
         }
-        
+
         set({
           kitchen: result.kitchen,
           economy: result.economy,
@@ -685,11 +847,17 @@ export const useGameStore = create<GameStore>()(
             harvest: newMushroomHarvest,
           },
         });
-        
+
+        // Reset weekly meal tracking on new week
+        if (rentPaid) {
+          get().resetWeeklyMeals();
+        }
+
         // Process daily meal after state update
         get().processDailyMeal();
+        get().cookDailyMeal();
       },
-      
+
       // Plant Hobby actions
       buySeeds: (typeId, qty = 1) => {
         const state = get();

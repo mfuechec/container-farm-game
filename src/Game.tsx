@@ -68,7 +68,8 @@ export function Game() {
   const upgradeHousing = useGameStore(s => s.upgradeHousing);
   const downgradeHousing = useGameStore(s => s.downgradeHousing);
   const buyStaple = useGameStore(s => s.buyStaple);
-  
+  const buyKitchenStaple = useGameStore(s => s.buyKitchenStaple);
+
   // Derived values - compute from state directly
   const kitchenBonuses = useMemo(() => getActiveKitchenBonuses(kitchen.storage), [kitchen.storage]);
   const growthMultiplier = useMemo(() => getBonusMultiplier(kitchenBonuses, 'growth'), [kitchenBonuses]);
@@ -182,9 +183,12 @@ export function Game() {
       content = (
         <PantryView
           pantry={pantry}
+          kitchen={kitchen}
           gameDay={Math.floor(gameDay)}
+          money={economy.money}
           todaysMeal={todaysMeal}
           onBuyStaple={buyStaple}
+          onBuyKitchenStaple={buyKitchenStaple}
           onBack={handleBack}
           theme={theme}
         />

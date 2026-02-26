@@ -33,6 +33,10 @@ const baseFoodItem: FoodItem = {
 const baseKitchen: KitchenState = {
   capacity: 5,
   storage: [],
+  staples: [],
+  discoveredRecipes: [],
+  mealHistory: [],
+  weekStartDay: 0,
 };
 
 describe('decayStorageItems', () => {
@@ -86,6 +90,7 @@ describe('addToStorage', () => {
 
   it('returns null when at capacity', () => {
     const fullKitchen: KitchenState = {
+      ...baseKitchen,
       capacity: 2,
       storage: [
         baseFoodItem,
@@ -161,6 +166,7 @@ describe('hasCapacity', () => {
 
   it('returns false when full', () => {
     const fullKitchen: KitchenState = {
+      ...baseKitchen,
       capacity: 1,
       storage: [baseFoodItem],
     };

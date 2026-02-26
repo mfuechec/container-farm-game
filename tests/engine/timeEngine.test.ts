@@ -80,7 +80,7 @@ describe('processTick', () => {
     pots: [],
     harvest: [],
     lightCoverage: 2,
-    kitchen: { capacity: 5, storage: [] },
+    kitchen: { capacity: 5, storage: [], staples: [], discoveredRecipes: [], mealHistory: [], weekStartDay: 0 },
     economy: {
       money: 100,
       weeklyRent: 50,
@@ -166,7 +166,7 @@ describe('skipTime', () => {
       pots: [],
       harvest: [],
       lightCoverage: 2,
-      kitchen: { capacity: 5, storage: [] },
+      kitchen: { capacity: 5, storage: [], staples: [], discoveredRecipes: [], mealHistory: [], weekStartDay: 0 },
       economy: {
         money: 100,
         weeklyRent: 50,
