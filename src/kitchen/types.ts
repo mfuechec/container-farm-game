@@ -2,8 +2,14 @@
  * Kitchen System
  * 
  * Shared storage for food items from any hobby.
- * Provides bonuses and reduces grocery bill.
+ * Provides bonuses, reduces grocery bill, and enables cooking.
  */
+
+import { KITCHEN, RECIPES, STAPLES, VARIETY_BONUS } from '../balance';
+
+// =============================================================================
+// STORAGE
+// =============================================================================
 
 // Generic food item that any hobby can produce
 export interface FoodItem {
@@ -25,18 +31,107 @@ export interface FoodItem {
   };
   
   // Source tracking
-  sourceHobby: string;         // e.g., 'plants', 'mushrooms'
-  sourceType: string;          // e.g., 'basil', 'oyster'
+  sourceHobby: string;         // e.g., 'plants', 'mushrooms', 'store'
+  sourceType: string;          // e.g., 'basil', 'oyster', 'pasta'
 }
 
+// Staple item (store-bought, doesn't decay)
+export interface StapleItem {
+  id: string;
+  stapleId: keyof typeof STAPLES;
+  name: string;
+  emoji: string;
+  quantity: number;
+}
+
+// =============================================================================
+// RECIPES & MEALS
+// =============================================================================
+
+export type RecipeId = keyof typeof RECIPES;
+
+// A cooked meal (logged in history)
+export interface MealLog {
+  id: string;
+  recipeId: RecipeId | null;    // null = takeout
+  recipeName: string;
+  emoji: string;
+  cookedAt: number;             // Game day (fractional)
+  grocerySavings: number;       // How much this meal saved
+  ingredientsUsed: {            // What was consumed
+    itemId: string;
+    name: string;
+    quantity: number;
+  }[];
+}
+
+// =============================================================================
+// KITCHEN STATE
+// =============================================================================
+
 export interface KitchenState {
-  storage: FoodItem[];
-  capacity: number;
+  // Storage
+  storage: FoodItem[];          // Homegrown ingredients
+  staples: StapleItem[];        // Store-bought ingredients
+  capacity: number;             // Max unique ingredient types
+  
+  // Recipes
+  discoveredRecipes: RecipeId[];
+  
+  // Meal tracking
+  mealHistory: MealLog[];       // All meals this week
+  weekStartDay: number;         // When current week started (for reset)
+}
+
+// =============================================================================
+// VARIETY BONUS
+// =============================================================================
+
+export interface VarietyStatus {
+  uniqueMealsThisWeek: number;
+  tierName: string | null;
+  tierEmoji: string | null;
+  efficiencyBonus: number;      // 0.05 = +5%
+  discoveryBonus: number;       // 2.0 = 2x discovery chance
+}
+
+export function getVarietyStatus(mealHistory: MealLog[], weekStartDay: number, currentDay: number): VarietyStatus {
+  // Count unique recipes this week (excluding takeout)
+  const thisWeekMeals = mealHistory.filter(m => m.cookedAt >= weekStartDay && m.recipeId !== null);
+  const uniqueRecipes = new Set(thisWeekMeals.map(m => m.recipeId));
+  const uniqueCount = uniqueRecipes.size;
+  
+  // Find highest matching tier
+  let tierName: string | null = null;
+  let tierEmoji: string | null = null;
+  let efficiencyBonus = 0;
+  let discoveryBonus = 1.0;
+  
+  for (const tier of VARIETY_BONUS.tiers) {
+    if (uniqueCount >= tier.minMeals) {
+      tierName = tier.name;
+      tierEmoji = tier.emoji;
+      efficiencyBonus = tier.efficiencyBonus;
+      discoveryBonus = tier.discoveryBonus;
+    }
+  }
+  
+  return {
+    uniqueMealsThisWeek: uniqueCount,
+    tierName,
+    tierEmoji,
+    efficiencyBonus,
+    discoveryBonus,
+  };
 }
 
 export const INITIAL_KITCHEN: KitchenState = {
   storage: [],
-  capacity: 8,  // Unique items only - variety matters
+  staples: [],
+  capacity: KITCHEN.storageCapacity,
+  discoveredRecipes: [],
+  mealHistory: [],
+  weekStartDay: 0,
 };
 
 /**

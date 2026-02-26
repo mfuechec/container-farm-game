@@ -212,3 +212,163 @@ export const SYNERGIES = {
     cap: 0.25,               // Max 25% plant yield boost
   },
 } as const;
+
+// =============================================================================
+// KITCHEN
+// =============================================================================
+
+export const KITCHEN = {
+  storageCapacity: 15,       // Max ingredient types (items stack)
+  takeoutCost: 12,           // Penalty when no meal can be made
+} as const;
+
+// =============================================================================
+// STAPLES (store-bought ingredients)
+// =============================================================================
+
+export const STAPLES = {
+  pasta:      { name: 'Pasta',      emoji: '🍝', price: 3, stackLimit: 10 },
+  rice:       { name: 'Rice',       emoji: '🍚', price: 3, stackLimit: 10 },
+  tomatoes:   { name: 'Tomatoes',   emoji: '🍅', price: 4, stackLimit: 8  },
+  garlic:     { name: 'Garlic',     emoji: '🧄', price: 2, stackLimit: 12 },
+  olive_oil:  { name: 'Olive Oil',  emoji: '🫒', price: 5, stackLimit: 6  },
+  cheese:     { name: 'Cheese',     emoji: '🧀', price: 6, stackLimit: 6  },
+} as const;
+
+// =============================================================================
+// RECIPES
+// =============================================================================
+
+/**
+ * Ingredient requirements:
+ * - Specific: { basil: 2 } — needs exactly basil
+ * - Any herb: { _anyHerb: 1 } — any herb works
+ * - Any mushroom: { _anyMushroom: 1 } — any mushroom works
+ * - Any X different herbs: { _anyHerbsDistinct: 2 } — needs 2 different herbs
+ */
+export const RECIPES = {
+  // Tier 1 — Simple ($6-8)
+  herb_oil: {
+    name: 'Herb Oil',
+    emoji: '🫒',
+    tier: 1,
+    groceryValue: 8,
+    ingredients: { _anyHerb: 1, olive_oil: 1 },
+  },
+  garlic_mushrooms: {
+    name: 'Garlic Mushrooms',
+    emoji: '🍄',
+    tier: 1,
+    groceryValue: 7,
+    ingredients: { _anyMushroom: 1, garlic: 1, olive_oil: 1 },
+  },
+  simple_salad: {
+    name: 'Simple Salad',
+    emoji: '🥗',
+    tier: 1,
+    groceryValue: 6,
+    ingredients: { _anyHerb: 1, tomatoes: 1, olive_oil: 1 },
+  },
+
+  // Tier 2 — Standard ($10-15)
+  pesto_pasta: {
+    name: 'Pesto Pasta',
+    emoji: '🍝',
+    tier: 2,
+    groceryValue: 14,
+    ingredients: { basil: 2, pasta: 1, olive_oil: 1, garlic: 1 },
+  },
+  herb_rice: {
+    name: 'Herb Rice',
+    emoji: '🍚',
+    tier: 2,
+    groceryValue: 10,
+    ingredients: { _anyHerb: 1, rice: 1, garlic: 1 },
+  },
+  mushroom_risotto: {
+    name: 'Mushroom Risotto',
+    emoji: '🍄',
+    tier: 2,
+    groceryValue: 15,
+    ingredients: { _anyMushroom: 2, rice: 1, cheese: 1, garlic: 1 },
+  },
+  caprese_salad: {
+    name: 'Caprese Salad',
+    emoji: '🍅',
+    tier: 2,
+    groceryValue: 12,
+    ingredients: { basil: 2, tomatoes: 2, cheese: 1 },
+  },
+  tabbouleh: {
+    name: 'Tabbouleh',
+    emoji: '🥗',
+    tier: 2,
+    groceryValue: 11,
+    ingredients: { parsley: 2, tomatoes: 1, olive_oil: 1 },
+  },
+  mushroom_pasta: {
+    name: 'Mushroom Pasta',
+    emoji: '🍝',
+    tier: 2,
+    groceryValue: 13,
+    ingredients: { _anyMushroom: 2, pasta: 1, garlic: 1, olive_oil: 1 },
+  },
+
+  // Tier 3 — Complex ($18-25)
+  italian_herb_pasta: {
+    name: 'Italian Herb Pasta',
+    emoji: '🇮🇹',
+    tier: 3,
+    groceryValue: 22,
+    ingredients: { basil: 1, parsley: 1, pasta: 1, tomatoes: 1, garlic: 1 },
+  },
+  herb_mushroom_risotto: {
+    name: 'Herb Mushroom Risotto',
+    emoji: '🍚',
+    tier: 3,
+    groceryValue: 20,
+    ingredients: { _anyHerb: 1, _anyMushroom: 1, rice: 1, cheese: 1 },
+  },
+  garden_pasta: {
+    name: 'Garden Pasta',
+    emoji: '🌿',
+    tier: 3,
+    groceryValue: 19,
+    ingredients: { _anyHerbsDistinct: 2, _anyMushroom: 1, pasta: 1, olive_oil: 1 },
+  },
+  chimichurri_bowl: {
+    name: 'Chimichurri Bowl',
+    emoji: '🥣',
+    tier: 3,
+    groceryValue: 18,
+    ingredients: { parsley: 1, cilantro: 1, rice: 1, garlic: 1, olive_oil: 1 },
+  },
+
+  // Tier 4 — Gourmet ($28-35)
+  lions_mane_steak: {
+    name: "Lion's Mane Steak",
+    emoji: '🦁',
+    tier: 4,
+    groceryValue: 28,
+    ingredients: { lions_mane: 2, garlic: 1, olive_oil: 1, _anyHerb: 1 },
+  },
+  full_garden_feast: {
+    name: 'Full Garden Feast',
+    emoji: '👨‍🍳',
+    tier: 4,
+    groceryValue: 35,
+    ingredients: { _anyHerbsDistinct: 3, _anyMushroomsDistinct: 2, pasta: 1, cheese: 1, tomatoes: 1 },
+  },
+} as const;
+
+// =============================================================================
+// VARIETY BONUS
+// =============================================================================
+
+export const VARIETY_BONUS = {
+  tiers: [
+    { minMeals: 3, name: 'Well-Fed',     emoji: '🍽️', efficiencyBonus: 0.05, discoveryBonus: 1.0 },
+    { minMeals: 5, name: 'Thriving',     emoji: '🌟', efficiencyBonus: 0.10, discoveryBonus: 1.0 },
+    { minMeals: 7, name: 'Gourmet Week', emoji: '👨‍🍳', efficiencyBonus: 0.15, discoveryBonus: 2.0 },
+  ],
+} as const;
