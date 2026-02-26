@@ -99,7 +99,7 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
   const { table, light, pots, plants } = plantHobby;
 
   // Track current dimensions for resize detection
-  const dimensionsRef = useRef({ width: 0, height: 0 });
+  const sceneParamsRef = useRef({ width: 0, height: 0, potSlots: 0, coverage: 0 });
   
   // Initialize PixiJS once on mount
   useEffect(() => {
@@ -123,7 +123,7 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
       }
 
       appRef.current = app;
-      dimensionsRef.current = { width, height };
+      sceneParamsRef.current = { width, height, potSlots: table.potSlots, coverage: light.coverage };
 
       // Create scene structure
       const scene = createScene(app, width, height, table.potSlots, light.coverage, handleSlotClick);
@@ -196,10 +196,12 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
   // Handle resize by recreating the scene (not the app)
   useEffect(() => {
     if (!appRef.current || !sceneRef.current) return;
-    if (dimensionsRef.current.width === width && dimensionsRef.current.height === height) return;
-    
+    const params = sceneParamsRef.current;
+    if (params.width === width && params.height === height
+        && params.potSlots === table.potSlots && params.coverage === light.coverage) return;
+
     const app = appRef.current;
-    dimensionsRef.current = { width, height };
+    sceneParamsRef.current = { width, height, potSlots: table.potSlots, coverage: light.coverage };
     
     // Resize the renderer
     app.renderer.resize(width, height);
