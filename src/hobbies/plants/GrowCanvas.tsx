@@ -105,8 +105,9 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
   useEffect(() => {
     if (!canvasRef.current || appRef.current) return;
 
+    let cancelled = false;
     const app = new Application();
-    
+
     const init = async () => {
       await app.init({
         width,
@@ -118,51 +119,62 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
         resizeTo: undefined, // Disable PixiJS's internal resize observer
       });
 
+      // StrictMode guard: if cleanup ran while we were awaiting, bail out
+      if (cancelled) {
+        try { app.destroy(true); } catch {}
+        return;
+      }
+
       if (canvasRef.current) {
         canvasRef.current.appendChild(app.canvas);
       }
 
       appRef.current = app;
-      sceneParamsRef.current = { width, height, potSlots: table.potSlots, coverage: light.coverage };
+
+      // Read fresh state from store (closure values may be stale after async init)
+      const currentPlantHobby = useGameStore.getState().plantHobby;
+      const { table: curTable, light: curLight, pots: curPots, plants: curPlants } = currentPlantHobby;
+
+      sceneParamsRef.current = { width, height, potSlots: curTable.potSlots, coverage: curLight.coverage };
 
       // Create scene structure
-      const scene = createScene(app, width, height, table.potSlots, light.coverage, handleSlotClick);
+      const scene = createScene(app, width, height, curTable.potSlots, curLight.coverage, handleSlotClick);
       sceneRef.current = scene;
 
       // Initial render of pots
-      updatePots(scene.potsContainer, scene.pots, table.potSlots, pots, plants, light.coverage, width, height, handleSlotClick, animRef.current);
-      
+      updatePots(scene.potsContainer, scene.pots, curTable.potSlots, curPots, curPlants, curLight.coverage, width, height, handleSlotClick, animRef.current);
+
       // Animation ticker
       app.ticker.add(() => {
         if (!sceneRef.current) return;
-        
+
         const anim = animRef.current;
         const elapsed = Date.now() - anim.startTime;
-        
+
         // Light flicker
         const lightAlpha = calcLightFlicker(elapsed);
         if (sceneRef.current.lightGlow) {
           sceneRef.current.lightGlow.alpha = lightAlpha;
         }
-        
+
         // Leaf sway - update all leaf containers (additive to base position)
         for (const [slotIndex, leafContainer] of anim.leafContainers) {
           const swayOffset = calcLeafSway(elapsed, slotIndex);
           const basePos = anim.leafBasePositions.get(slotIndex) || { x: 0, y: 0 };
           leafContainer.x = basePos.x + swayOffset;
         }
-        
+
         // Growth pulses
         for (const [plantId, startTime] of anim.activePulses) {
           const progressMs = Date.now() - startTime;
           const pulse = calcGrowthPulse(progressMs);
-          
+
           if (pulse.complete) {
             anim.activePulses.delete(plantId);
           }
           // Scale is applied in drawPot via pulseScale
         }
-        
+
         // Update particles
         const deltaMs = app.ticker.deltaMS;
         for (const [slotIndex, particles] of anim.activeParticles) {
@@ -173,7 +185,7 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
             anim.activeParticles.set(slotIndex, updated);
           }
         }
-        
+
         // Render particles
         renderParticles(sceneRef.current.particlesContainer, anim.activeParticles);
       });
@@ -182,6 +194,7 @@ export function GrowCanvas({ width, height, onSlotClick }: GrowCanvasProps) {
     init();
 
     return () => {
+      cancelled = true;
       try {
         app.destroy(true, { children: true });
       } catch (e) {
