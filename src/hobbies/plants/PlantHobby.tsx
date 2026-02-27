@@ -58,29 +58,32 @@ export function PlantHobby({ onBack }: PlantHobbyProps) {
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
   
   // Measure synchronously before paint to prevent flash
+  // Re-run when tab changes because the container div unmounts/remounts with the tab
   useLayoutEffect(() => {
     const container = canvasContainerRef.current;
     if (!container) return;
-    
+
     const updateSize = () => {
       // Account for container padding (8px on each side = 16px total)
       const containerPadding = 16;
       const availableWidth = container.clientWidth - containerPadding;
+      // Skip if container was removed from DOM (ResizeObserver fires with 0 on unmount)
+      if (availableWidth <= 0) return;
       // Maintain 2:1 aspect ratio, with min/max bounds
       const width = Math.max(280, Math.min(availableWidth, 600));
       const height = Math.round(width * 0.5); // 2:1 aspect ratio
       setCanvasSize({ width, height });
     };
-    
+
     // Initial size - runs before paint
     updateSize();
-    
+
     // Watch for resize (can use regular effect behavior)
     const resizeObserver = new ResizeObserver(updateSize);
     resizeObserver.observe(container);
-    
+
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [tab]);
 
   const { table, pots, plants, seeds, harvest } = plantHobby;
   const kitchenFull = kitchen.storage.length >= kitchen.capacity;
