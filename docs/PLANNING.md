@@ -49,8 +49,29 @@
 
 **Goal:** Build exactly what's specced.
 
-**Input:** Feature spec + balance values
+**Input:** Feature spec + balance values + handoff doc
 **Output:** Working code, tests, Storybook stories
+
+**Handoff doc must include:**
+- Summary of what to build
+- Architecture decisions
+- **Existing systems affected** (see below)
+- Files to create/modify
+- Testing priorities
+
+#### Existing Systems Checklist
+
+Before handing off, answer these:
+
+| Question | Answer |
+|----------|--------|
+| What existing code does this touch? | List files/systems |
+| Replace, extend, or run alongside? | Be explicit |
+| What gets deprecated/removed? | List it |
+| Entry points that need rewiring? | e.g., "tick() should call X instead of Y" |
+| Migration for existing saves? | If state shape changes |
+
+**Why this matters:** Without this, Claude Code will (reasonably) add new code alongside old code, creating parallel systems. Be explicit about what goes away.
 
 ### 4. Playtest (Mark)
 
@@ -90,7 +111,7 @@ Track playtest feedback here (or in separate feature docs):
 
 | Date | Feature | Feedback | Resolution |
 |------|---------|----------|------------|
-| | | | |
+| 2026-02-27 | Kitchen System | Dual pantry systems created (old + new) due to missing "existing systems" section in handoff | Added checklist to planning workflow; cleanup task created |
 
 ---
 
