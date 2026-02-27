@@ -18,6 +18,39 @@ The kitchen system was implemented alongside the existing pantry system instead 
 
 ---
 
+## 🐛 Critical Bug Fix (Do This First!)
+
+**Harvests don't flow to the recipe kitchen.** The UI calls the old `storePlantHarvestInPantry()` which stores to `pantry.items`, but the recipe system reads from `kitchen.storage`.
+
+### Fix: Wire Up Harvest Flow
+
+**`src/hobbies/plants/components/HarvestManager.tsx`** (or wherever the store button is):
+```diff
+- onStoreToPantry={storePlantHarvestInPantry}
++ onStoreToPantry={(harvestId) => {
++   // Convert harvest to FoodItem and store in kitchen
++   const harvest = plantHobby.harvest.find(h => h.id === harvestId);
++   if (!harvest) return false;
++   const food = harvestToFoodItem(harvest);
++   return storeInKitchen(food);
++ }}
+```
+
+Or create a new action `storePlantHarvestInKitchen()` that:
+1. Finds the harvest item
+2. Converts to FoodItem using `harvestToFoodItem()` from `kitchenEngine.ts`
+3. Calls `storeInKitchen()`
+4. Removes from harvest
+
+**Same fix needed for mushrooms.**
+
+### Verify After Fix
+- Harvest a plant, click Store
+- Check kitchen storage has the item
+- Wait for day rollover, verify meal cooks (not takeout)
+
+---
+
 ## Files to Modify/Delete
 
 ### Delete
