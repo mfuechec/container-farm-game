@@ -47,38 +47,46 @@ export function PlantShop({
             return (
               <div key={plant.id} style={{
                 display: 'flex',
-                alignItems: 'center',
                 gap: 12,
                 padding: 10,
                 background: theme.bgAlt,
                 borderRadius: theme.radiusMd,
               }}>
-                <span style={{ fontSize: 20 }}>{plant.emoji}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: theme.text, fontSize: 13 }}>
-                    {plant.name}
-                    {owned > 0 && <span style={{ color: theme.accent, marginLeft: 6 }}>×{owned}</span>}
-                  </div>
-                  <div style={{ fontSize: 10, color: theme.textMuted }}>
-                    {plant.daysToMature}d · ${plant.sellPrice}/ea
+                {/* Left column: emoji + title/description */}
+                <div style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 20 }}>{plant.emoji}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: theme.text, fontSize: 13 }}>
+                      {plant.name}
+                      {owned > 0 && <span style={{ color: theme.accent, marginLeft: 6 }}>×{owned}</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: theme.textMuted }}>
+                      Grows in {plant.daysToMature} days
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => onBuySeeds(plant.id)}
-                  disabled={!canAfford}
-                  style={{
-                    padding: '6px 12px',
-                    background: canAfford ? theme.accent : theme.bgAlt,
-                    border: `1px solid ${canAfford ? theme.accent : theme.border}`,
-                    borderRadius: theme.radiusSm,
-                    color: canAfford ? theme.textInverse : theme.textMuted,
-                    cursor: canAfford ? 'pointer' : 'not-allowed',
-                    fontWeight: 600,
-                    fontSize: 12,
-                  }}
-                >
-                  ${plant.seedCost}
-                </button>
+                {/* Right column: stats + button */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <div style={{ fontSize: 10, color: theme.textMuted }}>
+                    ${plant.sellPrice}/ea
+                  </div>
+                  <button
+                    onClick={() => onBuySeeds(plant.id)}
+                    disabled={!canAfford}
+                    style={{
+                      padding: '6px 12px',
+                      background: canAfford ? theme.accent : theme.bgAlt,
+                      border: `1px solid ${canAfford ? theme.accent : theme.border}`,
+                      borderRadius: theme.radiusSm,
+                      color: canAfford ? theme.textInverse : theme.textMuted,
+                      cursor: canAfford ? 'pointer' : 'not-allowed',
+                      fontWeight: 600,
+                      fontSize: 12,
+                    }}
+                  >
+                    ${plant.seedCost}
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -98,41 +106,49 @@ export function PlantShop({
             return (
               <div key={t.id} style={{
                 display: 'flex',
-                alignItems: 'center',
                 gap: 12,
                 padding: 10,
                 background: owned ? `${theme.accent}15` : theme.bgAlt,
                 border: owned ? `1px solid ${theme.accent}` : `1px solid transparent`,
                 borderRadius: theme.radiusMd,
               }}>
-                <span style={{ fontSize: 20 }}>{t.emoji}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: theme.text, fontSize: 13 }}>
-                    {t.name}
-                    {owned && <span style={{ color: theme.accent, marginLeft: 6, fontSize: 10 }}>✓ owned</span>}
-                  </div>
-                  <div style={{ fontSize: 10, color: theme.textMuted }}>
-                    {t.potSlots} slots · {t.description}
+                {/* Left column: emoji + title/description */}
+                <div style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 20 }}>{t.emoji}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: theme.text, fontSize: 13 }}>
+                      {t.name}
+                      {owned && <span style={{ color: theme.accent, marginLeft: 6, fontSize: 10 }}>✓ owned</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: theme.textMuted }}>
+                      {t.description}
+                    </div>
                   </div>
                 </div>
-                {!owned && (
-                  <button
-                    onClick={() => onUpgradeTable(t.id)}
-                    disabled={!canAfford || t.cost === 0}
-                    style={{
-                      padding: '6px 12px',
-                      background: canAfford ? theme.accent : theme.bgAlt,
-                      border: `1px solid ${canAfford ? theme.accent : theme.border}`,
-                      borderRadius: theme.radiusSm,
-                      color: canAfford ? theme.textInverse : theme.textMuted,
-                      cursor: canAfford ? 'pointer' : 'not-allowed',
-                      fontWeight: 600,
-                      fontSize: 12,
-                    }}
-                  >
-                    {t.cost === 0 ? 'Free' : `$${t.cost}`}
-                  </button>
-                )}
+                {/* Right column: stats + button */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <div style={{ fontSize: 10, color: theme.textMuted }}>
+                    {t.potSlots} slots
+                  </div>
+                  {!owned && (
+                    <button
+                      onClick={() => onUpgradeTable(t.id)}
+                      disabled={!canAfford || t.cost === 0}
+                      style={{
+                        padding: '6px 12px',
+                        background: canAfford ? theme.accent : theme.bgAlt,
+                        border: `1px solid ${canAfford ? theme.accent : theme.border}`,
+                        borderRadius: theme.radiusSm,
+                        color: canAfford ? theme.textInverse : theme.textMuted,
+                        cursor: canAfford ? 'pointer' : 'not-allowed',
+                        fontWeight: 600,
+                        fontSize: 12,
+                      }}
+                    >
+                      {t.cost === 0 ? 'Free' : `$${t.cost}`}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -152,41 +168,49 @@ export function PlantShop({
             return (
               <div key={l.id} style={{
                 display: 'flex',
-                alignItems: 'center',
                 gap: 12,
                 padding: 10,
                 background: owned ? `${theme.accent}15` : theme.bgAlt,
                 border: owned ? `1px solid ${theme.accent}` : `1px solid transparent`,
                 borderRadius: theme.radiusMd,
               }}>
-                <span style={{ fontSize: 20 }}>{l.emoji}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: theme.text, fontSize: 13 }}>
-                    {l.name}
-                    {owned && <span style={{ color: theme.accent, marginLeft: 6, fontSize: 10 }}>✓ owned</span>}
-                  </div>
-                  <div style={{ fontSize: 10, color: theme.textMuted }}>
-                    {l.coverage} coverage · {Math.round((l.growthBoost - 1) * 100)}% boost · {l.description}
+                {/* Left column: emoji + title/description */}
+                <div style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 20 }}>{l.emoji}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: theme.text, fontSize: 13 }}>
+                      {l.name}
+                      {owned && <span style={{ color: theme.accent, marginLeft: 6, fontSize: 10 }}>✓ owned</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: theme.textMuted }}>
+                      {l.description}
+                    </div>
                   </div>
                 </div>
-                {!owned && (
-                  <button
-                    onClick={() => onUpgradeLight(l.id)}
-                    disabled={!canAfford || l.cost === 0}
-                    style={{
-                      padding: '6px 12px',
-                      background: canAfford ? theme.accent : theme.bgAlt,
-                      border: `1px solid ${canAfford ? theme.accent : theme.border}`,
-                      borderRadius: theme.radiusSm,
-                      color: canAfford ? theme.textInverse : theme.textMuted,
-                      cursor: canAfford ? 'pointer' : 'not-allowed',
-                      fontWeight: 600,
-                      fontSize: 12,
-                    }}
-                  >
-                    {l.cost === 0 ? 'Free' : `$${l.cost}`}
-                  </button>
-                )}
+                {/* Right column: stats + button */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <div style={{ fontSize: 10, color: theme.textMuted, textAlign: 'right' }}>
+                    {l.coverage} · +{Math.round((l.growthBoost - 1) * 100)}%
+                  </div>
+                  {!owned && (
+                    <button
+                      onClick={() => onUpgradeLight(l.id)}
+                      disabled={!canAfford || l.cost === 0}
+                      style={{
+                        padding: '6px 12px',
+                        background: canAfford ? theme.accent : theme.bgAlt,
+                        border: `1px solid ${canAfford ? theme.accent : theme.border}`,
+                        borderRadius: theme.radiusSm,
+                        color: canAfford ? theme.textInverse : theme.textMuted,
+                        cursor: canAfford ? 'pointer' : 'not-allowed',
+                        fontWeight: 600,
+                        fontSize: 12,
+                      }}
+                    >
+                      {l.cost === 0 ? 'Free' : `$${l.cost}`}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -206,38 +230,46 @@ export function PlantShop({
             return (
               <div key={tier} style={{
                 display: 'flex',
-                alignItems: 'center',
                 gap: 12,
                 padding: 10,
                 background: isSelected ? `${theme.accent}15` : theme.bgAlt,
                 border: isSelected ? `1px solid ${theme.accent}` : `1px solid transparent`,
                 borderRadius: theme.radiusMd,
               }}>
-                <span style={{ fontSize: 20 }}>🏪</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: theme.text, fontSize: 13 }}>
-                    {rental.label} Stall
-                    {isSelected && <span style={{ color: theme.accent, marginLeft: 6, fontSize: 10 }}>✓ active</span>}
-                  </div>
-                  <div style={{ fontSize: 10, color: theme.textMuted }}>
-                    Market every {rental.frequencyDays} days · Sell at full price + freshness bonus
+                {/* Left column: emoji + title/description */}
+                <div style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 20 }}>🏪</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: theme.text, fontSize: 13 }}>
+                      {rental.label} Stall
+                      {isSelected && <span style={{ color: theme.accent, marginLeft: 6, fontSize: 10 }}>✓ active</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: theme.textMuted }}>
+                      Full price + freshness bonus
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => onSetMarketRental(isSelected ? null : tier)}
-                  style={{
-                    padding: '6px 12px',
-                    background: isSelected ? theme.surface : theme.accent,
-                    border: `1px solid ${isSelected ? theme.border : theme.accent}`,
-                    borderRadius: theme.radiusSm,
-                    color: isSelected ? theme.textSecondary : theme.textInverse,
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    fontSize: 12,
-                  }}
-                >
-                  {isSelected ? 'Cancel' : `$${rental.cost}/${tier === 'monthly' ? 'mo' : tier === 'biweekly' ? '2wk' : 'wk'}`}
-                </button>
+                {/* Right column: stats + button */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <div style={{ fontSize: 10, color: theme.textMuted }}>
+                    Every {rental.frequencyDays}d
+                  </div>
+                  <button
+                    onClick={() => onSetMarketRental(isSelected ? null : tier)}
+                    style={{
+                      padding: '6px 12px',
+                      background: isSelected ? theme.surface : theme.accent,
+                      border: `1px solid ${isSelected ? theme.border : theme.accent}`,
+                      borderRadius: theme.radiusSm,
+                      color: isSelected ? theme.textSecondary : theme.textInverse,
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: 12,
+                    }}
+                  >
+                    {isSelected ? 'Cancel' : `$${rental.cost}/${tier === 'monthly' ? 'mo' : tier === 'biweekly' ? '2wk' : 'wk'}`}
+                  </button>
+                </div>
               </div>
             );
           })}
